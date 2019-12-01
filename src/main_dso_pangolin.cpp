@@ -194,7 +194,7 @@ int main( int argc, char** argv )
     setting_debugout_runquiet = FLAGS_runQuiet;
     usO = FLAGS_useSampleOutput;
 
-    settingsDefault(3);// FLAGS_preset);
+    settingsDefault(FLAGS_preset);
     ImageFolderReader* reader = new ImageFolderReader(FLAGS_sequenceFolder);
     reader->setGlobalCalibration();
 

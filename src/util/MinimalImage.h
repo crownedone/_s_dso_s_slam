@@ -100,8 +100,10 @@ public:
         at(static_cast<int>(u + 0.5f), static_cast<int>(v + 0.5f)) = val;
     }
 
-    inline void setPixel4(const float& u, const float& v, T val)
+    inline void setPixel4(const float& uu, const float& vv, T val)
     {
+        int u = (int)uu;
+        int v = (int)vv;
         at(u + 1, v + 1) = val;
         at(u + 1, v) = val;
         at(u, v + 1) = val;
@@ -135,6 +137,13 @@ public:
             at(u + i, v - 2) = val;
             at(u + i, v + 2) = val;
         }
+    }
+
+    inline void setPixelCirc(const float& uu, const float& vv, T val)
+    {
+        int u = static_cast<int>(uu);
+        int v = static_cast<int>(vv);
+        setPixelCirc(u, v, val);
     }
 
 

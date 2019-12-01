@@ -9,7 +9,6 @@
     #undef CHECK
 #endif
 
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <cstdarg>
 
 static const inline std::string CFormat(const char* format, ...)

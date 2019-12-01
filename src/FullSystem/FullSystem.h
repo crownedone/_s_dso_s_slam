@@ -262,10 +262,6 @@ private:
 
 
 
-
-
-
-
     // =================== changed by tracker-thread. protected by trackMutex ============
     boost::mutex trackMutex;
     std::vector<FrameShell*> allFrameHistory;

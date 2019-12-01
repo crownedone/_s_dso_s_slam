@@ -1,24 +1,24 @@
 /**
-* This file is part of DSO.
-* 
-* Copyright 2016 Technical University of Munich and Intel.
-* Developed by Jakob Engel <engelj at in dot tum dot de>,
-* for more information see <http://vision.in.tum.de/dso>.
-* If you use this code, please cite the respective publications as
-* listed on the above website.
-*
-* DSO is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* DSO is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with DSO. If not, see <http://www.gnu.org/licenses/>.
+    This file is part of DSO.
+
+    Copyright 2016 Technical University of Munich and Intel.
+    Developed by Jakob Engel <engelj at in dot tum dot de>,
+    for more information see <http://vision.in.tum.de/dso>.
+    If you use this code, please cite the respective publications as
+    listed on the above website.
+
+    DSO is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    DSO is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -33,40 +33,40 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-//#include <stdint.h> // portable: uint64_t   MSVC: __int64 
+//#include <stdint.h> // portable: uint64_t   MSVC: __int64
 
 
 namespace dso
 {
 
-	// MSVC defines this in winsock2.h!?
-	/*typedef struct timeval {
-		long tv_sec;
-		long tv_usec;
-	} timeval;*/
+// MSVC defines this in winsock2.h!?
+/*  typedef struct timeval {
+    long tv_sec;
+    long tv_usec;
+    } timeval;*/
 
-	/*int gettimeofday(struct timeval * tp, struct timezone * tzp) {
-		// Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
-		// This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
-		// until 00:00:00 January 1, 1970 
-		static const uint64_t EPOCH = ((uint64_t)116444736000000000ULL);
+/*  int gettimeofday(struct timeval * tp, struct timezone * tzp) {
+    // Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
+    // This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
+    // until 00:00:00 January 1, 1970
+    static const uint64_t EPOCH = ((uint64_t)116444736000000000ULL);
 
-		SYSTEMTIME  system_time;
-		FILETIME    file_time;
-		uint64_t    time;
+    SYSTEMTIME  system_time;
+    FILETIME    file_time;
+    uint64_t    time;
 
-		GetSystemTime(&system_time);
-		SystemTimeToFileTime(&system_time, &file_time);
-		time = ((uint64_t)file_time.dwLowDateTime);
-		time += ((uint64_t)file_time.dwHighDateTime) << 32;
+    GetSystemTime(&system_time);
+    SystemTimeToFileTime(&system_time, &file_time);
+    time = ((uint64_t)file_time.dwLowDateTime);
+    time += ((uint64_t)file_time.dwHighDateTime) << 32;
 
-		tp->tv_sec = (long)((time - EPOCH) / 10000000L);
-		tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
-		return 0;
-	}*/
+    tp->tv_sec = (long)((time - EPOCH) / 10000000L);
+    tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
+    return 0;
+    }*/
 
-/*class FrameHessian;
-class CalibHessian;*/
+/*  class FrameHessian;
+    class CalibHessian;*/
 
 struct FrameHessian;
 struct CalibHessian;
@@ -80,29 +80,29 @@ class KeyFrameDisplay;
 
 struct GraphConnection
 {
-	KeyFrameDisplay* from;
-	KeyFrameDisplay* to;
-	int fwdMarg, bwdMarg, fwdAct, bwdAct;
+    KeyFrameDisplay* from;
+    KeyFrameDisplay* to;
+    int fwdMarg, bwdMarg, fwdAct, bwdAct;
 };
 
 
 class PangolinDSOViewer : public Output3DWrapper
 {
 public:
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    PangolinDSOViewer(int w, int h, bool startRunThread=true);
-	virtual ~PangolinDSOViewer();
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    PangolinDSOViewer(int w, int h, bool startRunThread = true);
+    virtual ~PangolinDSOViewer();
 
-	void run();
-	void close();
+    void run();
+    void close();
 
-	void addImageToDisplay(std::string name, MinimalImageB3* image);
-	void clearAllImagesToDisplay();
+    void addImageToDisplay(std::string name, MinimalImageB3* image);
+    void clearAllImagesToDisplay();
 
 
-	// ==================== Output3DWrapper Functionality ======================
-    virtual void publishGraph(const std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>> &connectivity) override;
-    virtual void publishKeyframes( std::vector<FrameHessian*> &frames, bool final, CalibHessian* HCalib) override;
+    // ==================== Output3DWrapper Functionality ======================
+    virtual void publishGraph(const std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>>& connectivity) override;
+    virtual void publishKeyframes( std::vector<FrameHessian*>& frames, bool final, CalibHessian* HCalib) override;
     virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib) override;
 
 
@@ -115,56 +115,56 @@ public:
     virtual void reset() override;
 private:
 
-	bool needReset;
-	void reset_internal();
-	void drawConstraints();
+    bool needReset;
+    void reset_internal();
+    void drawConstraints();
 
-	boost::thread runThread;
-	bool running;
-	int w,h;
-
-
-
-	// images rendering
-	boost::mutex openImagesMutex;
-	MinimalImageB3* internalVideoImg;
-	MinimalImageB3* internalKFImg;
-	MinimalImageB3* internalResImg;
-	bool videoImgChanged, kfImgChanged, resImgChanged;
+    boost::thread runThread;
+    bool running;
+    int w, h;
 
 
 
-	// 3D model rendering
-	boost::mutex model3DMutex;
-	KeyFrameDisplay* currentCam;
-	std::vector<KeyFrameDisplay*> keyframes;
-	std::vector<Vec3f,Eigen::aligned_allocator<Vec3f>> allFramePoses;
-	std::map<int, KeyFrameDisplay*> keyframesByKFID;
-	std::vector<GraphConnection,Eigen::aligned_allocator<GraphConnection>> connections;
+    // images rendering
+    boost::mutex openImagesMutex;
+    MinimalImageB3* internalVideoImg;
+    MinimalImageB3* internalKFImg;
+    MinimalImageB3* internalResImg;
+    bool videoImgChanged, kfImgChanged, resImgChanged;
 
 
 
-	// render settings
-	bool settings_showKFCameras;
-	bool settings_showCurrentCamera;
-	bool settings_showTrajectory;
-	bool settings_showFullTrajectory;
-	bool settings_showActiveConstraints;
-	bool settings_showAllConstraints;
-
-	float settings_scaledVarTH;
-	float settings_absVarTH;
-	int settings_pointCloudMode;
-	float settings_minRelBS;
-	int settings_sparsity;
-
-	// timings
-	struct timeval last_track;
-	struct timeval last_map;
+    // 3D model rendering
+    boost::mutex model3DMutex;
+    KeyFrameDisplay* currentCam;
+    std::vector<KeyFrameDisplay*> keyframes;
+    std::vector<Vec3f, Eigen::aligned_allocator<Vec3f>> allFramePoses;
+    std::map<int, KeyFrameDisplay*> keyframesByKFID;
+    std::vector<GraphConnection, Eigen::aligned_allocator<GraphConnection>> connections;
 
 
-	std::deque<float> lastNTrackingMs;
-	std::deque<float> lastNMappingMs;
+
+    // render settings
+    bool settings_showKFCameras;
+    bool settings_showCurrentCamera;
+    bool settings_showTrajectory;
+    bool settings_showFullTrajectory;
+    bool settings_showActiveConstraints;
+    bool settings_showAllConstraints;
+
+    float settings_scaledVarTH;
+    float settings_absVarTH;
+    int settings_pointCloudMode;
+    float settings_minRelBS;
+    int settings_sparsity;
+
+    // timings
+    struct timeval last_track;
+    struct timeval last_map;
+
+
+    std::deque<float> lastNTrackingMs;
+    std::deque<float> lastNMappingMs;
 };
 
 

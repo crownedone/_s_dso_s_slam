@@ -594,52 +594,52 @@ void FullSystem::activatePointsMT_Reductor(
 void FullSystem::activatePointsMT()
 {
 
-    if(ef->nPoints < setting_desiredPointDensity * 0.66)
+    if(ef->nPoints < setting_desiredPointDensity * 0.66f)
     {
-        currentMinActDist -= 0.8;
+        currentMinActDist -= 0.8f;
     }
 
-    if(ef->nPoints < setting_desiredPointDensity * 0.8)
+    if(ef->nPoints < setting_desiredPointDensity * 0.8f)
     {
-        currentMinActDist -= 0.5;
+        currentMinActDist -= 0.5f;
     }
-    else if(ef->nPoints < setting_desiredPointDensity * 0.9)
+    else if(ef->nPoints < setting_desiredPointDensity * 0.9f)
     {
-        currentMinActDist -= 0.2;
+        currentMinActDist -= 0.2f;
     }
     else if(ef->nPoints < setting_desiredPointDensity)
     {
-        currentMinActDist -= 0.1;
+        currentMinActDist -= 0.1f;
     }
 
-    if(ef->nPoints > setting_desiredPointDensity * 1.5)
+    if(ef->nPoints > setting_desiredPointDensity * 1.5f)
     {
-        currentMinActDist += 0.8;
+        currentMinActDist += 0.8f;
     }
 
-    if(ef->nPoints > setting_desiredPointDensity * 1.3)
+    if(ef->nPoints > setting_desiredPointDensity * 1.3f)
     {
-        currentMinActDist += 0.5;
+        currentMinActDist += 0.5f;
     }
 
-    if(ef->nPoints > setting_desiredPointDensity * 1.15)
+    if(ef->nPoints > setting_desiredPointDensity * 1.15f)
     {
-        currentMinActDist += 0.2;
+        currentMinActDist += 0.2f;
     }
 
     if(ef->nPoints > setting_desiredPointDensity)
     {
-        currentMinActDist += 0.1;
+        currentMinActDist += 0.1f;
     }
 
-    if(currentMinActDist < 0)
+    if(currentMinActDist < 0.f)
     {
-        currentMinActDist = 0;
+        currentMinActDist = 0.f;
     }
 
-    if(currentMinActDist > 4)
+    if(currentMinActDist > 4.f)
     {
-        currentMinActDist = 4;
+        currentMinActDist = 4.f;
     }
 
     if(!setting_debugout_runquiet)

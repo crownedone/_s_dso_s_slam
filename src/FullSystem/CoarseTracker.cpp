@@ -1274,15 +1274,15 @@ void CoarseDistanceMap::makeK(CalibHessian* HCalib)
     {
         w[level] = w[0] >> level;
         h[level] = h[0] >> level;
-        fx[level] = fx[level - 1] * 0.5;
-        fy[level] = fy[level - 1] * 0.5;
+        fx[level] = fx[level - 1] * 0.5f;
+        fy[level] = fy[level - 1] * 0.5f;
         cx[level] = (cx[0] + 0.5) / ((int)1 << level) - 0.5f;
         cy[level] = (cy[0] + 0.5) / ((int)1 << level) - 0.5f;
     }
 
     for (int level = 0; level < pyrLevelsUsed; ++ level)
     {
-        K[level]  << fx[level], 0.0, cx[level], 0.0, fy[level], cy[level], 0.0, 0.0, 1.0;
+        K[level]  << fx[level], 0.0f, cx[level], 0.0f, fy[level], cy[level], 0.0f, 0.0f, 1.0f;
         Ki[level] = K[level].inverse();
         fxi[level] = Ki[level](0, 0);
         fyi[level] = Ki[level](1, 1);

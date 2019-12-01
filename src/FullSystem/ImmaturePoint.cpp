@@ -90,10 +90,10 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
     if(debugPrint)
         LOG_INFO("trace pt (%.1f %.1f) from frame %d to %d. Range %f -> %f. t %f %f %f!\n",
-               u, v,
-               host->shell->id, frame->shell->id,
-               idepth_min, idepth_max,
-               hostToFrame_Kt[0], hostToFrame_Kt[1], hostToFrame_Kt[2]);
+                 u, v,
+                 host->shell->id, frame->shell->id,
+                 idepth_min, idepth_max,
+                 hostToFrame_Kt[0], hostToFrame_Kt[1], hostToFrame_Kt[2]);
 
 //  const float stepsize = 1.0;             // stepsize for initial discrete search.
 //  const int GNIterations = 3;             // max # GN iterations
@@ -110,7 +110,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
     if(!(uMin > 4 && vMin > 4 && uMin < wG[0] - 5 && vMin < hG[0] - 5))
     {
         if(debugPrint) LOG_INFO("OOB uMin %f %f - %f %f %f (id %f-%f)!\n",
-                                  u, v, uMin, vMin,  ptpMin[2], idepth_min, idepth_max);
+                                    u, v, uMin, vMin,  ptpMin[2], idepth_min, idepth_max);
 
         lastTraceUV = Vec2f(-1, -1);
         lastTracePixelInterval = 0;
@@ -243,12 +243,12 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
     if(debugPrint)
         LOG_INFO("trace pt (%.1f %.1f) from frame %d to %d. Range %f (%.1f %.1f) -> %f (%.1f %.1f)! ErrorInPixel %.1f!\n",
-               u, v,
-               host->shell->id, frame->shell->id,
-               idepth_min, uMin, vMin,
-               idepth_max, uMax, vMax,
-               errorInPixel
-              );
+                 u, v,
+                 host->shell->id, frame->shell->id,
+                 idepth_min, uMin, vMin,
+                 idepth_max, uMax, vMax,
+                 errorInPixel
+                );
 
 
     if(dist > maxPixSearch)
@@ -320,7 +320,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
         if(debugPrint)
             LOG_INFO("step %.1f %.1f (id %f): energy = %f!\n",
-                   ptx, pty, 0.0f, energy);
+                     ptx, pty, 0.0f, energy);
 
 
         errors[i] = energy;
@@ -404,8 +404,8 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
             if(debugPrint)
                 LOG_INFO("GN BACK %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
-                       it, energy, H, b, stepBack,
-                       uBak, vBak, bestU, bestV);
+                         it, energy, H, b, stepBack,
+                         uBak, vBak, bestU, bestV);
         }
         else
         {
@@ -437,8 +437,8 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
             if(debugPrint)
                 LOG_INFO("GN step %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
-                       it, energy, H, b, step,
-                       uBak, vBak, bestU, bestV);
+                         it, energy, H, b, step,
+                         uBak, vBak, bestU, bestV);
         }
 
         if(fabsf(stepBack) < setting_trace_GNThreshold)
