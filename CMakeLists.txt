@@ -14,6 +14,8 @@ find_package(sophus CONFIG REQUIRED)
 
 find_package(Pangolin CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
+find_package(gflags CONFIG REQUIRED)
+find_package(glog CONFIG REQUIRED)
 #find_package(libzip CONFIG REQUIRED)
 
 # flags
@@ -44,9 +46,12 @@ set(dso_SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedSCHessian.cpp
   ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/EnergyFunctionalStructs.cpp
   ${PROJECT_SOURCE_DIR}/src/util/settings.cpp
+  ${PROJECT_SOURCE_DIR}/src/util/Undistort.h
   ${PROJECT_SOURCE_DIR}/src/util/Undistort.cpp
   ${PROJECT_SOURCE_DIR}/src/util/globalCalib.cpp
   ${PROJECT_SOURCE_DIR}/src/sys/times.cpp
+  ${PROJECT_SOURCE_DIR}/src/sys/Logging.hpp
+  ${PROJECT_SOURCE_DIR}/src/util/DatasetReader.h
 )
 set(SOPHUS_SOURCE_DIR "C:/vcpkg/installed/x64-windows/include/")
 include_directories(
@@ -112,6 +117,8 @@ include_directories(${CSPARSE_INCLUDE_DIR} ${CHOLMOD_INCLUDE_DIR})
 if (OpenCV_FOUND AND Boost_FOUND)
 	add_executable(dso ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin.cpp ${dso_SOURCE_FILES} ${dso_opencv_SOURCE_FILES} ${dso_pangolin_SOURCE_FILES})
 
+	target_link_libraries(dso gflags)
+	target_link_libraries(dso glog::glog)
 	target_link_libraries(dso pangolin)
 	target_link_libraries(dso opencv_world opencv_img_hash ${__cvcomponent})
 	target_link_libraries(dso Boost::system Boost::thread Boost::filesystem)

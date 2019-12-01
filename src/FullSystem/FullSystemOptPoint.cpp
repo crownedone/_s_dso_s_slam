@@ -88,12 +88,12 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 	if(!std::isfinite(lastEnergy) || lastHdd < setting_minIdepthH_act)
 	{
 		if(print)
-			printf("OptPoint: Not well-constrained (%d res, H=%.1f). E=%f. SKIP!\n",
+			LOG_INFO("OptPoint: Not well-constrained (%d res, H=%.1f). E=%f. SKIP!\n",
 				nres, lastHdd, lastEnergy);
 		return 0;
 	}
 
-	if(print) printf("Activate point. %d residuals. H=%f. Initial Energy: %f. Initial Id=%f\n" ,
+	if(print) LOG_INFO("Activate point. %d residuals. H=%f. Initial Energy: %f. Initial Id=%f\n" ,
 			nres, lastHdd,lastEnergy,currentIdepth);
 
 	float lambda = 0.1;
@@ -110,14 +110,14 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 
 		if(!std::isfinite(lastEnergy) || newHdd < setting_minIdepthH_act)
 		{
-			if(print) printf("OptPoint: Not well-constrained (%d res, H=%.1f). E=%f. SKIP!\n",
+			if(print) LOG_INFO("OptPoint: Not well-constrained (%d res, H=%.1f). E=%f. SKIP!\n",
 					nres,
 					newHdd,
 					lastEnergy);
 			return 0;
 		}
 
-		if(print) printf("%s %d (L %.2f) %s: %f -> %f (idepth %f)!\n",
+		if(print) LOG_INFO("%s %d (L %.2f) %s: %f -> %f (idepth %f)!\n",
 				(true || newEnergy < lastEnergy) ? "ACCEPT" : "REJECT",
 				iteration,
 				log10(lambda),
@@ -149,7 +149,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 
 	if(!std::isfinite(currentIdepth))
 	{
-		printf("MAJOR ERROR! point idepth is nan after initialization (%f).\n", currentIdepth);
+		LOG_INFO("MAJOR ERROR! point idepth is nan after initialization (%f).\n", currentIdepth);
 		return (PointHessian*)((long)(-1));		// yeah I'm like 99% sure this is OK on 32bit systems.
 	}
 
@@ -160,7 +160,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 
 	if(numGoodRes < minObs)
 	{
-		if(print) printf("OptPoint: OUTLIER!\n");
+		if(print) LOG_INFO("OptPoint: OUTLIER!\n");
 		return (PointHessian*)((long)(-1));		// yeah I'm like 99% sure this is OK on 32bit systems.
 	}
 
@@ -198,7 +198,7 @@ PointHessian* FullSystem::optimizeImmaturePoint(
 			}
 		}
 
-	if(print) printf("point activated!\n");
+	if(print) LOG_INFO("point activated!\n");
 
 	statistics_numActivatedPoints++;
 	return p;

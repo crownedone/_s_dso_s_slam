@@ -372,7 +372,7 @@ inline int makePixelStatus(Eigen::Vector3f* grads, bool* map, int w, int h, floa
 
     float quotia = numGoodPoints / (float)(desiredDensity);
 
-    int newSparsity = (sparsityFactor * sqrtf(quotia)) + 0.7f;
+    int newSparsity = static_cast<int>((sparsityFactor * sqrtf(quotia)) + 0.7f);
 
 
     if(newSparsity < 1)

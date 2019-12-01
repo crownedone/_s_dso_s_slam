@@ -223,7 +223,7 @@ int PixelSelector::makeMaps(
 //          numHave++;
 //      }
 //
-//      printf("FAST selection: got %f / %f!\n", numHave, numWant);
+//      LOG_INFO("FAST selection: got %f / %f!\n", numHave, numWant);
 //      quotia = numWant / numHave;
 //  }
 //  else
@@ -266,7 +266,7 @@ int PixelSelector::makeMaps(
                 idealPotential = currentPotential - 1;
             }
 
-            //      printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+            //      LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
             //              100*numHave/(float)(wG[0]*hG[0]),
             //              100*numWant/(float)(wG[0]*hG[0]),
             //              currentPotential,
@@ -283,7 +283,7 @@ int PixelSelector::makeMaps(
                 idealPotential = currentPotential + 1;
             }
 
-            //      printf("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+            //      LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
             //              100*numHave/(float)(wG[0]*hG[0]),
             //              100*numWant/(float)(wG[0]*hG[0]),
             //              currentPotential,
@@ -317,7 +317,7 @@ int PixelSelector::makeMaps(
         }
     }
 
-//  printf("PixelSelector: have %.2f%%, need %.2f%%. KEEPCURR with pot %d -> %d. Subsampled to %.2f%%\n",
+//  LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. KEEPCURR with pot %d -> %d. Subsampled to %.2f%%\n",
 //          100*numHave/(float)(wG[0]*hG[0]),
 //          100*numWant/(float)(wG[0]*hG[0]),
 //          currentPotential,

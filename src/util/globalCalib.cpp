@@ -55,19 +55,19 @@ void setGlobalCalib(int w, int h, const Eigen::Matrix3f& K)
         pyrLevelsUsed++;
     }
 
-    printf("using pyramid levels 0 to %d. coarsest resolution: %d x %d!\n",
+    LOG_INFO("using pyramid levels 0 to %d. coarsest resolution: %d x %d!\n",
            pyrLevelsUsed - 1, wlvl, hlvl);
 
     if(wlvl > 100 && hlvl > 100)
     {
-        printf("\n\n===============WARNING!===================\n "
+        LOG_INFO("\n\n===============WARNING!===================\n "
                "using not enough pyramid levels.\n"
                "Consider scaling to a resolution that is a multiple of a power of 2.\n");
     }
 
     if(pyrLevelsUsed < 3)
     {
-        printf("\n\n===============WARNING!===================\n "
+        LOG_INFO("\n\n===============WARNING!===================\n "
                "I need higher resolution.\n"
                "I will probably segfault.\n");
     }

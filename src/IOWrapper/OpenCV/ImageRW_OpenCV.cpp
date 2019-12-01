@@ -25,7 +25,7 @@
 
 #include "IOWrapper/ImageRW.h"
 #include <opencv2/highgui/highgui.hpp>
-
+#include <sys/Logging.hpp>
 
 namespace dso
 {
@@ -38,13 +38,13 @@ MinimalImageB* readImageBW_8U(std::string filename)
 
     if(m.rows * m.cols == 0)
     {
-        printf("cv::imread could not read image gs %s! this may segfault. \n", filename.c_str());
+        LOG_INFO("cv::imread could not read image gs %s! this may segfault. \n", filename.c_str());
         return 0;
     }
 
     if(m.type() != CV_8U)
     {
-        printf("cv::imread did something strange! this may segfault. \n");
+        LOG_INFO("cv::imread did something strange! this may segfault. \n");
         return 0;
     }
 
@@ -59,13 +59,13 @@ MinimalImageB3* readImageRGB_8U(std::string filename)
 
     if(m.rows * m.cols == 0)
     {
-        printf("cv::imread could not read image any %s! this may segfault. \n", filename.c_str());
+        LOG_INFO("cv::imread could not read image any %s! this may segfault. \n", filename.c_str());
         return 0;
     }
 
     if(m.type() != CV_8UC3)
     {
-        printf("cv::imread did something strange! this may segfault. \n");
+        LOG_INFO("cv::imread did something strange! this may segfault. \n");
         return 0;
     }
 
@@ -80,13 +80,13 @@ MinimalImage<unsigned short>* readImageBW_16U(std::string filename)
 
     if(m.rows * m.cols == 0)
     {
-        printf("cv::imread could not read image unch %s! this may segfault. \n", filename.c_str());
+        LOG_INFO("cv::imread could not read image unch %s! this may segfault. \n", filename.c_str());
         return 0;
     }
 
     if(m.type() != CV_16U)
     {
-        printf("readImageBW_16U called on image that is not a 16bit grayscale image. this may segfault. \n");
+        LOG_INFO("readImageBW_16U called on image that is not a 16bit grayscale image. this may segfault. \n");
         return 0;
     }
 
@@ -101,13 +101,13 @@ MinimalImageB* readStreamBW_8U(char* data, int numBytes)
 
     if(m.rows * m.cols == 0)
     {
-        printf("cv::imdecode could not read stream gss (%d bytes)! this may segfault. \n", numBytes);
+        LOG_INFO("cv::imdecode could not read stream gss (%d bytes)! this may segfault. \n", numBytes);
         return 0;
     }
 
     if(m.type() != CV_8U)
     {
-        printf("cv::imdecode did something strange! this may segfault. \n");
+        LOG_INFO("cv::imdecode did something strange! this may segfault. \n");
         return 0;
     }
 

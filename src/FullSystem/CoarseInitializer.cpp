@@ -97,7 +97,7 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
 
     alphaK = 2.5 * 2.5; //*freeDebugParam1*freeDebugParam1;
     alphaW = 150 * 150; //*freeDebugParam2*freeDebugParam2;
-    regWeight = 0.8;//*freeDebugParam4;
+    regWeight = 0.8f;//*freeDebugParam4;
     couplingWeight = 1;//*freeDebugParam5;
 
     if(!snapped)
@@ -146,22 +146,22 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
         Vec3f resOld = calcResAndGS(lvl, H, b, Hsc, bsc, refToNew_current, refToNew_aff_current, false);
         applyStep(lvl);
 
-        float lambda = 0.1;
-        float eps = 1e-4;
+        float lambda = 0.1f;
+        float eps = static_cast<float>(1e-4);
         int fails = 0;
 
         if(printDebug)
         {
-            printf("lvl %d, it %d (l=%f) %s: %.3f+%.5f -> %.3f+%.5f (%.3f->%.3f) (|inc| = %f)! \t",
-                   lvl, 0, lambda,
-                   "INITIA",
-                   sqrtf((float)(resOld[0] / resOld[2])),
-                   sqrtf((float)(resOld[1] / resOld[2])),
-                   sqrtf((float)(resOld[0] / resOld[2])),
-                   sqrtf((float)(resOld[1] / resOld[2])),
-                   (resOld[0] + resOld[1]) / resOld[2],
-                   (resOld[0] + resOld[1]) / resOld[2],
-                   0.0f);
+            LOG_INFO("lvl %d, it %d (l=%f) %s: %.3f+%.5f -> %.3f+%.5f (%.3f->%.3f) (|inc| = %f)! \t",
+                     lvl, 0, lambda,
+                     "INITIA",
+                     sqrtf((float)(resOld[0] / resOld[2])),
+                     sqrtf((float)(resOld[1] / resOld[2])),
+                     sqrtf((float)(resOld[0] / resOld[2])),
+                     sqrtf((float)(resOld[1] / resOld[2])),
+                     (resOld[0] + resOld[1]) / resOld[2],
+                     (resOld[0] + resOld[1]) / resOld[2],
+                     0.0f);
             std::cout << refToNew_current.log().transpose() << " AFF " << refToNew_aff_current.vec().transpose() << "\n";
         }
 
@@ -216,18 +216,18 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
 
             if(printDebug)
             {
-                printf("lvl %d, it %d (l=%f) %s: %.5f + %.5f + %.5f -> %.5f + %.5f + %.5f (%.2f->%.2f) (|inc| = %f)! \t",
-                       lvl, iteration, lambda,
-                       (accept ? "ACCEPT" : "REJECT"),
-                       sqrtf((float)(resOld[0] / resOld[2])),
-                       sqrtf((float)(regEnergy[0] / regEnergy[2])),
-                       sqrtf((float)(resOld[1] / resOld[2])),
-                       sqrtf((float)(resNew[0] / resNew[2])),
-                       sqrtf((float)(regEnergy[1] / regEnergy[2])),
-                       sqrtf((float)(resNew[1] / resNew[2])),
-                       eTotalOld / resNew[2],
-                       eTotalNew / resNew[2],
-                       inc.norm());
+                LOG_INFO("lvl %d, it %d (l=%f) %s: %.5f + %.5f + %.5f -> %.5f + %.5f + %.5f (%.2f->%.2f) (|inc| = %f)! \t",
+                         lvl, iteration, lambda,
+                         (accept ? "ACCEPT" : "REJECT"),
+                         sqrtf((float)(resOld[0] / resOld[2])),
+                         sqrtf((float)(regEnergy[0] / regEnergy[2])),
+                         sqrtf((float)(resOld[1] / resOld[2])),
+                         sqrtf((float)(resNew[0] / resNew[2])),
+                         sqrtf((float)(regEnergy[1] / regEnergy[2])),
+                         sqrtf((float)(resNew[1] / resNew[2])),
+                         eTotalOld / resNew[2],
+                         eTotalNew / resNew[2],
+                         inc.norm());
                 std::cout << refToNew_new.log().transpose() << " AFF " << refToNew_aff_new.vec().transpose() << "\n";
             }
 
@@ -251,9 +251,9 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
                 lambda *= 0.5;
                 fails = 0;
 
-                if(lambda < 0.0001)
+                if(lambda < 0.0001f)
                 {
-                    lambda = 0.0001;
+                    lambda = 0.0001f;
                 }
             }
             else
@@ -261,9 +261,9 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
                 fails++;
                 lambda *= 4;
 
-                if(lambda > 10000)
+                if(lambda > 10000.f)
                 {
-                    lambda = 10000;
+                    lambda = 10000.f;
                 }
             }
 
@@ -346,7 +346,7 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 
     for(int i = 0; i < wl * hl; i++)
     {
-        iRImg.at(i) = Vec3b(colorRef[i][0], colorRef[i][0], colorRef[i][0]);
+        iRImg.at(i) = Vec3b(static_cast<unsigned char>(colorRef[i][0]), static_cast<unsigned char>(colorRef[i][0]), static_cast<unsigned char>(colorRef[i][0]));
     }
 
 
@@ -375,12 +375,12 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 
         if(!point->isGood)
         {
-            iRImg.setPixel9(point->u + 0.5f, point->v + 0.5f, Vec3b(0, 0, 0));
+            iRImg.setPixel9(static_cast<int>(point->u + 0.5f), static_cast<int>(point->v + 0.5f), Vec3b(0, 0, 0));
         }
 
         else
         {
-            iRImg.setPixel9(point->u + 0.5f, point->v + 0.5f, makeRainbow3B(point->iR * fac));
+            iRImg.setPixel9(static_cast<int>(point->u + 0.5f), static_cast<int>(point->v + 0.5f), makeRainbow3B(point->iR * fac));
         }
     }
 
@@ -407,10 +407,10 @@ Vec3f CoarseInitializer::calcResAndGS(
     Vec3f t = refToNew.translation().cast<float>();
     Eigen::Vector2f r2new_aff = Eigen::Vector2f(exp(refToNew_aff.a), refToNew_aff.b);
 
-    float fxl = fx[lvl];
-    float fyl = fy[lvl];
-    float cxl = cx[lvl];
-    float cyl = cy[lvl];
+    float fxl = static_cast<float>(fx[lvl]);
+    float fyl = static_cast<float>(fy[lvl]);
+    float cxl = static_cast<float>(cx[lvl]);
+    float cyl = static_cast<float>(cy[lvl]);
 
 
     Accumulator11 E;
@@ -597,9 +597,9 @@ Vec3f CoarseInitializer::calcResAndGS(
     }
 
     EAlpha.finish();
-    float alphaEnergy = alphaW * (EAlpha.A + refToNew.translation().squaredNorm() * npts);
+    float alphaEnergy = static_cast<float>(alphaW * (EAlpha.A + refToNew.translation().squaredNorm() * npts));
 
-    //printf("AE = %f * %f + %f\n", alphaW, EAlpha.A, refToNew.translation().squaredNorm() * npts);
+    //LOG_INFO("AE = %f * %f + %f\n", alphaW, EAlpha.A, refToNew.translation().squaredNorm() * npts);
 
 
     // compute alpha opt.
@@ -648,7 +648,7 @@ Vec3f CoarseInitializer::calcResAndGS(
     acc9SC.finish();
 
 
-    //printf("nelements in H: %d, in E: %d, in Hsc: %d / 9!\n", (int)acc9.num, (int)E.num, (int)acc9SC.num*9);
+    //LOG_INFO("nelements in H: %d, in E: %d, in Hsc: %d / 9!\n", (int)acc9.num, (int)E.num, (int)acc9SC.num*9);
     H_out = acc9.H.topLeftCorner<8, 8>(); // / acc9.num;
     b_out = acc9.H.topRightCorner<8, 1>(); // / acc9.num;
     H_out_sc = acc9SC.H.topLeftCorner<8, 8>(); // / acc9.num;
@@ -669,12 +669,12 @@ Vec3f CoarseInitializer::calcResAndGS(
 
 
 
-    return Vec3f(E.A, alphaEnergy, E.num);
+    return Vec3f(E.A, alphaEnergy, static_cast<float>(E.num));
 }
 
 float CoarseInitializer::rescale()
 {
-    float factor = 20 * thisToNext.translation().norm();
+    float factor = static_cast<float>(20 * thisToNext.translation().norm());
 //  float factori = 1.0f/factor;
 //  float factori2 = factori*factori;
 //
@@ -699,7 +699,7 @@ Vec3f CoarseInitializer::calcEC(int lvl)
 {
     if(!snapped)
     {
-        return Vec3f(0, 0, numPoints[lvl]);
+        return Vec3f(0.f, 0.f, static_cast<float>(numPoints[lvl]));
     }
 
     AccumulatorX<2> E;
@@ -719,13 +719,13 @@ Vec3f CoarseInitializer::calcEC(int lvl)
         float rNew = (point->idepth_new - point->iR);
         E.updateNoWeight(Vec2f(rOld * rOld, rNew * rNew));
 
-        //printf("%f %f %f!\n", point->idepth, point->idepth_new, point->iR);
+        //LOG_INFO("%f %f %f!\n", point->idepth, point->idepth_new, point->iR);
     }
 
     E.finish();
 
-    //printf("ER: %f %f %f!\n", couplingWeight*E.A1m[0], couplingWeight*E.A1m[1], (float)E.num.numIn1m);
-    return Vec3f(couplingWeight * E.A1m[0], couplingWeight * E.A1m[1], E.num);
+    //LOG_INFO("ER: %f %f %f!\n", couplingWeight*E.A1m[0], couplingWeight*E.A1m[1], (float)E.num.numIn1m);
+    return Vec3f(couplingWeight * E.A1m[0], couplingWeight * E.A1m[1], static_cast<float>(E.num));
 }
 void CoarseInitializer::optReg(int lvl)
 {
@@ -901,7 +901,7 @@ void CoarseInitializer::setFirst(   CalibHessian* HCalib, FrameHessian* newFrame
     float* statusMap = new float[w[0]*h[0]];
     bool* statusMapB = new bool[w[0]*h[0]];
 
-    float densities[] = {0.03, 0.05, 0.15, 0.5, 1};
+    float densities[] = {0.03f, 0.05f, 0.15f, 0.5f, 1.f};
 
     for(int lvl = 0; lvl < pyrLevelsUsed; lvl++)
     {
@@ -934,19 +934,19 @@ void CoarseInitializer::setFirst(   CalibHessian* HCalib, FrameHessian* newFrame
         for(int y = patternPadding + 1; y < hl - patternPadding - 2; y++)
             for(int x = patternPadding + 1; x < wl - patternPadding - 2; x++)
             {
-                //if(x==2) printf("y=%d!\n",y);
+                //if(x==2) LOG_INFO("y=%d!\n",y);
                 if((lvl != 0 && statusMapB[x + y * wl]) || (lvl == 0 && statusMap[x + y * wl] != 0))
                 {
                     //assert(patternNum==9);
-                    pl[nl].u = x + 0.1;
-                    pl[nl].v = y + 0.1;
-                    pl[nl].idepth = 1;
-                    pl[nl].iR = 1;
+                    pl[nl].u = x + 0.1f;
+                    pl[nl].v = y + 0.1f;
+                    pl[nl].idepth = 1.f;
+                    pl[nl].iR = 1.f;
                     pl[nl].isGood = true;
                     pl[nl].energy.setZero();
                     pl[nl].lastHessian = 0;
                     pl[nl].lastHessian_new = 0;
-                    pl[nl].my_type = (lvl != 0) ? 1 : statusMap[x + y * wl];
+                    pl[nl].my_type = (lvl != 0) ? 1.f : statusMap[x + y * wl];
 
                     Eigen::Vector3f* cpt = firstFrame->dIp[lvl] + x + y * w[lvl];
                     float sumGrad2 = 0;
@@ -1067,12 +1067,12 @@ void CoarseInitializer::doStep(int lvl, float lambda, Vec8f inc)
 
         if(newIdepth < 1e-3 )
         {
-            newIdepth = 1e-3;
+            newIdepth = static_cast<float>(1e-3);
         }
 
         if(newIdepth > 50)
         {
-            newIdepth = 50;
+            newIdepth = 50.f;
         }
 
         pts[i].idepth_new = newIdepth;
@@ -1137,7 +1137,7 @@ void CoarseInitializer::makeK(CalibHessian* HCalib)
 
 void CoarseInitializer::makeNN()
 {
-    const float NNDistFactor = 0.05;
+    const float NNDistFactor = 0.05f;
 
     typedef nanoflann::KDTreeSingleIndexAdaptor <
     nanoflann::L2_Simple_Adaptor<float, FLANNPointcloud>,

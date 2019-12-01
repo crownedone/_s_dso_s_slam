@@ -84,7 +84,7 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 		if( (in < setting_minPointsRemaining *(in+out) || fabs(logf((float)refToFh[0])) > setting_maxLogAffFacInWindow)
 				&& ((int)frameHessians.size())-flagged > setting_minFrames)
 		{
-//			printf("MARGINALIZE frame %d, as only %'d/%'d points remaining (%'d %'d %'d %'d). VisInLast %'d / %'d. traces %d, activated %d!\n",
+//			LOG_INFO("MARGINALIZE frame %d, as only %'d/%'d points remaining (%'d %'d %'d %'d). VisInLast %'d / %'d. traces %d, activated %d!\n",
 //					fh->frameID, in, in+out,
 //					(int)fh->pointHessians.size(), (int)fh->immaturePoints.size(),
 //					(int)fh->pointHessiansMarginalized.size(), (int)fh->pointHessiansOut.size(),
@@ -95,7 +95,7 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 		}
 		else
 		{
-//			printf("May Keep frame %d, as %'d/%'d points remaining (%'d %'d %'d %'d). VisInLast %'d / %'d. traces %d, activated %d!\n",
+//			LOG_INFO("May Keep frame %d, as %'d/%'d points remaining (%'d %'d %'d %'d). VisInLast %'d / %'d. traces %d, activated %d!\n",
 //					fh->frameID, in, in+out,
 //					(int)fh->pointHessians.size(), (int)fh->immaturePoints.size(),
 //					(int)fh->pointHessiansMarginalized.size(), (int)fh->pointHessiansOut.size(),
@@ -134,16 +134,16 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 			}
 		}
 
-//		printf("MARGINALIZE frame %d, as it is the closest (score %.2f)!\n",
+//		LOG_INFO("MARGINALIZE frame %d, as it is the closest (score %.2f)!\n",
 //				toMarginalize->frameID, smallestScore);
 		toMarginalize->flaggedForMarginalization = true;
 		flagged++;
 	}
 
-//	printf("FRAMES LEFT: ");
+//	LOG_INFO("FRAMES LEFT: ");
 //	for(FrameHessian* fh : frameHessians)
-//		printf("%d ", fh->frameID);
-//	printf("\n");
+//		LOG_INFO("%d ", fh->frameID);
+//	LOG_INFO("\n");
 }
 
 

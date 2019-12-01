@@ -89,7 +89,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
     float maxPixSearch = (wG[0] + hG[0]) * setting_maxPixSearch;
 
     if(debugPrint)
-        printf("trace pt (%.1f %.1f) from frame %d to %d. Range %f -> %f. t %f %f %f!\n",
+        LOG_INFO("trace pt (%.1f %.1f) from frame %d to %d. Range %f -> %f. t %f %f %f!\n",
                u, v,
                host->shell->id, frame->shell->id,
                idepth_min, idepth_max,
@@ -109,7 +109,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
     if(!(uMin > 4 && vMin > 4 && uMin < wG[0] - 5 && vMin < hG[0] - 5))
     {
-        if(debugPrint) printf("OOB uMin %f %f - %f %f %f (id %f-%f)!\n",
+        if(debugPrint) LOG_INFO("OOB uMin %f %f - %f %f %f (id %f-%f)!\n",
                                   u, v, uMin, vMin,  ptpMin[2], idepth_min, idepth_max);
 
         lastTraceUV = Vec2f(-1, -1);
@@ -133,7 +133,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
         {
             if(debugPrint)
             {
-                printf("OOB uMax  %f %f - %f %f!\n", u, v, uMax, vMax);
+                LOG_INFO("OOB uMax  %f %f - %f %f!\n", u, v, uMax, vMax);
             }
 
             lastTraceUV = Vec2f(-1, -1);
@@ -151,7 +151,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
         {
             if(debugPrint)
             {
-                printf("TOO CERTAIN ALREADY (dist %f)!\n", dist);
+                LOG_INFO("TOO CERTAIN ALREADY (dist %f)!\n", dist);
             }
 
             lastTraceUV = Vec2f(uMax + uMin, vMax + vMin) * 0.5;
@@ -184,7 +184,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
         {
             if(debugPrint)
             {
-                printf("OOB uMax-coarse %f %f %f!\n", uMax, vMax,  ptpMax[2]);
+                LOG_INFO("OOB uMax-coarse %f %f %f!\n", uMax, vMax,  ptpMax[2]);
             }
 
             lastTraceUV = Vec2f(-1, -1);
@@ -201,7 +201,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
     {
         if(debugPrint)
         {
-            printf("OOB SCALE %f %f %f!\n", uMax, vMax,  ptpMin[2]);
+            LOG_INFO("OOB SCALE %f %f %f!\n", uMax, vMax,  ptpMin[2]);
         }
 
         lastTraceUV = Vec2f(-1, -1);
@@ -222,7 +222,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
     {
         if(debugPrint)
         {
-            printf("NO SIGNIFICANT IMPROVMENT (%f)!\n", errorInPixel);
+            LOG_INFO("NO SIGNIFICANT IMPROVMENT (%f)!\n", errorInPixel);
         }
 
         lastTraceUV = Vec2f(uMax + uMin, vMax + vMin) * 0.5;
@@ -242,7 +242,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
     dy /= dist;
 
     if(debugPrint)
-        printf("trace pt (%.1f %.1f) from frame %d to %d. Range %f (%.1f %.1f) -> %f (%.1f %.1f)! ErrorInPixel %.1f!\n",
+        LOG_INFO("trace pt (%.1f %.1f) from frame %d to %d. Range %f (%.1f %.1f) -> %f (%.1f %.1f)! ErrorInPixel %.1f!\n",
                u, v,
                host->shell->id, frame->shell->id,
                idepth_min, uMin, vMin,
@@ -278,7 +278,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
     if(!std::isfinite(dx) || !std::isfinite(dy))
     {
-        //printf("COUGHT INF / NAN dxdy (%f %f)!\n", dx, dx);
+        //LOG_INFO("COUGHT INF / NAN dxdy (%f %f)!\n", dx, dx);
 
         lastTracePixelInterval = 0;
         lastTraceUV = Vec2f(-1, -1);
@@ -319,7 +319,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
         }
 
         if(debugPrint)
-            printf("step %.1f %.1f (id %f): energy = %f!\n",
+            LOG_INFO("step %.1f %.1f (id %f): energy = %f!\n",
                    ptx, pty, 0.0f, energy);
 
 
@@ -403,7 +403,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
             bestV = vBak + stepBack * dy;
 
             if(debugPrint)
-                printf("GN BACK %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
+                LOG_INFO("GN BACK %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
                        it, energy, H, b, stepBack,
                        uBak, vBak, bestU, bestV);
         }
@@ -436,7 +436,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
             bestEnergy = energy;
 
             if(debugPrint)
-                printf("GN step %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
+                LOG_INFO("GN step %d: E %f, H %f, b %f. id-step %f. UV %f %f -> %f %f.\n",
                        it, energy, H, b, step,
                        uBak, vBak, bestU, bestV);
         }
@@ -459,7 +459,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
     {
         if(debugPrint)
         {
-            printf("OUTLIER!\n");
+            LOG_INFO("OUTLIER!\n");
         }
 
         lastTracePixelInterval = 0;
@@ -496,7 +496,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
     if(!std::isfinite(idepth_min) || !std::isfinite(idepth_max) || (idepth_max < 0))
     {
-        //printf("COUGHT INF / NAN minmax depth (%f %f)!\n", idepth_min, idepth_max);
+        //LOG_INFO("COUGHT INF / NAN minmax depth (%f %f)!\n", idepth_min, idepth_max);
 
         lastTracePixelInterval = 0;
         lastTraceUV = Vec2f(-1, -1);

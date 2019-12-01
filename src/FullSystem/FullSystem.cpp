@@ -409,27 +409,27 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 
         if(i != 0)
         {
-            printf("RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
-                   i,
-                   i, pyrLevelsUsed - 1,
-                   aff_g2l_this.a, aff_g2l_this.b,
-                   achievedRes[0],
-                   achievedRes[1],
-                   achievedRes[2],
-                   achievedRes[3],
-                   achievedRes[4],
-                   coarseTracker->lastResiduals[0],
-                   coarseTracker->lastResiduals[1],
-                   coarseTracker->lastResiduals[2],
-                   coarseTracker->lastResiduals[3],
-                   coarseTracker->lastResiduals[4]);
+            LOG_INFO("RE-TRACK ATTEMPT %d with initOption %d and start-lvl %d (ab %f %f): %f %f %f %f %f -> %f %f %f %f %f \n",
+                     i,
+                     i, pyrLevelsUsed - 1,
+                     aff_g2l_this.a, aff_g2l_this.b,
+                     achievedRes[0],
+                     achievedRes[1],
+                     achievedRes[2],
+                     achievedRes[3],
+                     achievedRes[4],
+                     coarseTracker->lastResiduals[0],
+                     coarseTracker->lastResiduals[1],
+                     coarseTracker->lastResiduals[2],
+                     coarseTracker->lastResiduals[3],
+                     coarseTracker->lastResiduals[4]);
         }
 
 
         // do we have a new winner?
         if(trackingIsGood && std::isfinite((float)coarseTracker->lastResiduals[0]) && !(coarseTracker->lastResiduals[0] >=  achievedRes[0]))
         {
-            //printf("take over. minRes %f -> %f!\n", achievedRes[0], coarseTracker->lastResiduals[0]);
+            //LOG_INFO("take over. minRes %f -> %f!\n", achievedRes[0], coarseTracker->lastResiduals[0]);
             flowVecs = coarseTracker->lastFlowIndicators;
             aff_g2l = aff_g2l_this;
             lastF_2_fh = lastF_2_fh_this;
@@ -458,7 +458,7 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 
     if(!haveOneGood)
     {
-        printf("BIG ERROR! tracking failed entirely. Take predictred pose and hope we may somehow recover.\n");
+        LOG_INFO("BIG ERROR! tracking failed entirely. Take predictred pose and hope we may somehow recover.\n");
         flowVecs = Vec3(0, 0, 0);
         aff_g2l = aff_last_2_l;
         lastF_2_fh = lastF_2_fh_tries[0];
@@ -480,7 +480,7 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 
     if(!setting_debugout_runquiet)
     {
-        printf("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
+        LOG_INFO("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
     }
 
 
@@ -561,7 +561,7 @@ void FullSystem::traceNewCoarse(FrameHessian* fh)
         }
     }
 
-//  printf("ADD: TRACE: %'d points. %'d (%.0f%%) good. %'d (%.0f%%) skip. %'d (%.0f%%) badcond. %'d (%.0f%%) oob. %'d (%.0f%%) out. %'d (%.0f%%) uninit.\n",
+//  LOG_INFO("ADD: TRACE: %'d points. %'d (%.0f%%) good. %'d (%.0f%%) skip. %'d (%.0f%%) badcond. %'d (%.0f%%) oob. %'d (%.0f%%) out. %'d (%.0f%%) uninit.\n",
 //          trace_total,
 //          trace_good, 100*trace_good/(float)trace_total,
 //          trace_skip, 100*trace_skip/(float)trace_total,
@@ -643,8 +643,8 @@ void FullSystem::activatePointsMT()
     }
 
     if(!setting_debugout_runquiet)
-        printf("SPARSITY:  MinActDist %f (need %d points, have %d points)!\n",
-               currentMinActDist, (int)(setting_desiredPointDensity), ef->nPoints);
+        LOG_INFO("SPARSITY:  MinActDist %f (need %d points, have %d points)!\n",
+                 currentMinActDist, (int)(setting_desiredPointDensity), ef->nPoints);
 
 
 
@@ -738,7 +738,7 @@ void FullSystem::activatePointsMT()
     }
 
 
-//  printf("ACTIVATE: %d. (del %d, notReady %d, marg %d, good %d, marg-skip %d)\n",
+//  LOG_INFO("ACTIVATE: %d. (del %d, notReady %d, marg %d, good %d, marg-skip %d)\n",
 //          (int)toOptimize.size(), immature_deleted, immature_notReady, immature_needMarg, immature_want, immature_margskip);
 
     std::vector<PointHessian*> optimized;
@@ -901,7 +901,7 @@ void FullSystem::flagPointsForRemoval()
                     ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
 
 
-                    //printf("drop point in frame %d (%d goodRes, %d activeRes)\n", ph->host->idx, ph->numGoodResiduals, (int)ph->residuals.size());
+                    //LOG_INFO("drop point in frame %d (%d goodRes, %d activeRes)\n", ph->host->idx, ph->numGoodResiduals, (int)ph->residuals.size());
                 }
 
                 host->pointHessians[i] = 0;
@@ -951,19 +951,15 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
     fh->makeImages(image->image, &Hcalib);
 
 
-
-
     if(!initialized)
     {
         // use initializer!
         if(coarseInitializer->frameID < 0)  // first frame set. fh is kept by coarseInitializer.
         {
-
             coarseInitializer->setFirst(&Hcalib, fh);
         }
         else if(coarseInitializer->trackFrame(fh, outputWrapper))   // if SNAPPED
         {
-
             initializeFromInitializer(fh);
             lock.unlock();
             deliverTrackedFrame(fh, true);
@@ -993,7 +989,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
         if(!std::isfinite((double)tres[0]) || !std::isfinite((double)tres[1]) || !std::isfinite((double)tres[2]) || !std::isfinite((double)tres[3]))
         {
-            printf("Initial Tracking failed: LOST!\n");
+            LOG_INFO("Initial Tracking failed: LOST!\n");
             isLost = true;
             return;
         }
@@ -1019,9 +1015,6 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
                            2 * coarseTracker->firstCoarseRMSE < tres[0];
 
         }
-
-
-
 
         for(IOWrap::Output3DWrapper* ow : outputWrapper)
         {
@@ -1174,7 +1167,7 @@ void FullSystem::mappingLoop()
         mappedFrameSignal.notify_all();
     }
 
-    printf("MAPPING FINISHED!\n");
+    LOG_INFO("MAPPING FINISHED!\n");
 }
 
 void FullSystem::blockUntilMappingIsFinished()
@@ -1277,19 +1270,19 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
     {
         if(allKeyFramesHistory.size() == 2 && rmse > 20 * benchmark_initializerSlackFactor)
         {
-            printf("I THINK INITIALIZATINO FAILED! Resetting.\n");
+            LOG_INFO("I THINK INITIALIZATINO FAILED! Resetting.\n");
             initFailed = true;
         }
 
         if(allKeyFramesHistory.size() == 3 && rmse > 13 * benchmark_initializerSlackFactor)
         {
-            printf("I THINK INITIALIZATINO FAILED! Resetting.\n");
+            LOG_INFO("I THINK INITIALIZATINO FAILED! Resetting.\n");
             initFailed = true;
         }
 
         if(allKeyFramesHistory.size() == 4 && rmse > 9 * benchmark_initializerSlackFactor)
         {
-            printf("I THINK INITIALIZATINO FAILED! Resetting.\n");
+            LOG_INFO("I THINK INITIALIZATINO FAILED! Resetting.\n");
             initFailed = true;
         }
     }
@@ -1305,7 +1298,7 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 
 
     // =========================== REMOVE OUTLIER =========================
-    removeOutliers();
+    //removeOutliers();
 
 
 
@@ -1408,8 +1401,8 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
 
     if(!setting_debugout_runquiet)
-        printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100 * keepPercentage,
-               (int)(setting_desiredPointDensity), coarseInitializer->numPoints[0] );
+        LOG_INFO("Initialization: keep %.1f%% (need %d, have %d)!\n", 100 * keepPercentage,
+                 (int)(setting_desiredPointDensity), coarseInitializer->numPoints[0] );
 
     for(int i = 0; i < coarseInitializer->numPoints[0]; i++)
     {
@@ -1471,7 +1464,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     }
 
     initialized = true;
-    printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int)firstFrame->pointHessians.size());
+    LOG_INFO("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int)firstFrame->pointHessians.size());
 }
 
 void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
@@ -1509,7 +1502,7 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, float* gtDepth)
 
         }
 
-    printf("MADE %d IMMATURE POINTS!\n", (int)newFrame->immaturePoints.size());
+    LOG_INFO("MADE %d IMMATURE POINTS!\n", (int)newFrame->immaturePoints.size());
 
 }
 
@@ -1539,18 +1532,18 @@ void FullSystem::printLogLine()
     }
 
     if(!setting_debugout_runquiet)
-        printf("LOG %d: %.3f fine. Res: %d A, %d L, %d M; (%'d / %'d) forceDrop. a=%f, b=%f. Window %d (%d)\n",
-               allKeyFramesHistory.back()->id,
-               statistics_lastFineTrackRMSE,
-               ef->resInA,
-               ef->resInL,
-               ef->resInM,
-               (int)statistics_numForceDroppedResFwd,
-               (int)statistics_numForceDroppedResBwd,
-               allKeyFramesHistory.back()->aff_g2l.a,
-               allKeyFramesHistory.back()->aff_g2l.b,
-               frameHessians.back()->shell->id - frameHessians.front()->shell->id,
-               (int)frameHessians.size());
+        LOG_INFO("LOG %d: %.3f fine. Res: %d A, %d L, %d M; (%d / %d) forceDrop. a=%f, b=%f. Window %d (%d)\n",
+                 allKeyFramesHistory.back()->id,
+                 statistics_lastFineTrackRMSE,
+                 ef->resInA,
+                 ef->resInL,
+                 ef->resInM,
+                 (int)statistics_numForceDroppedResFwd,
+                 (int)statistics_numForceDroppedResBwd,
+                 allKeyFramesHistory.back()->aff_g2l.a,
+                 allKeyFramesHistory.back()->aff_g2l.b,
+                 frameHessians.back()->shell->id - frameHessians.front()->shell->id,
+                 (int)frameHessians.size());
 
 
     if(!setting_logStuff)

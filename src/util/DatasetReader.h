@@ -44,63 +44,46 @@
 
 using namespace dso;
 
-
-struct PrepImageItem
-{
-    int id;
-    bool isQueud;
-    ImageAndExposure* pt;
-
-    inline PrepImageItem(int _id)
-    {
-        id = _id;
-        isQueud = false;
-        pt = 0;
-    }
-
-    inline void release()
-    {
-        if(pt != 0)
-        {
-            delete pt;
-        }
-
-        pt = 0;
-    }
-};
-
-
-
-
 class ImageFolderReader
 {
 public:
-    ImageFolderReader(std::string path, std::string calibFile, std::string gammaFile, std::string vignetteFile)
+
+    bool valid = false;
+
+    ImageFolderReader(const std::string& path0, bool readStereo = false)
     {
-        this->path = path;
-        this->calibfile = calibFile;
+        path = path0;
+
+        if (!boost::filesystem::exists(path) | !boost::filesystem::is_directory(path))
+        {
+            LOG_ERROR("Not an existing directory: %s", path.string().c_str());
+            exit(EXIT_FAILURE);
+        }
+
+        images = path / "images";
+        calibfile = path / "camera.txt";
+        gamma = path / "pcalib.txt";
+        vignette = path / "vignette.png";
+
 
 #if HAS_ZIPLIB
         ziparchive = 0;
         databuffer = 0;
 #endif
 
-        isZipped = (path.length() > 4 && path.substr(path.length() - 4) == ".zip");
-
-
-
-
+        isZipped = (!boost::filesystem::exists(images) && boost::filesystem::exists(path / "images.zip"));
 
         if(isZipped)
         {
+            images = path / "images.zip";
 #if HAS_ZIPLIB
             int ziperror = 0;
-            ziparchive = zip_open(path.c_str(),  ZIP_RDONLY, &ziperror);
+            ziparchive = zip_open(images.string().c_str(),  ZIP_RDONLY, &ziperror);
 
             if(ziperror != 0)
             {
-                printf("ERROR %d reading archive %s!\n", ziperror, path.c_str());
-                exit(1);
+                LOG_ERROR("%d reading archive %s!\n", ziperror, path.c_str());
+                exit(EXIT_FAILURE);
             }
 
             files.clear();
@@ -119,34 +102,31 @@ public:
                 files.push_back(name);
             }
 
-            printf("got %d entries and %d files!\n", numEntries, (int)files.size());
+            LOG_INFO("got %d entries and %d files!\n", numEntries, (int)files.size());
             std::sort(files.begin(), files.end());
 #else
-            printf("ERROR: cannot read .zip archive, as compile without ziplib!\n");
-            exit(1);
+            LOG_ERROR("cannot read .zip archive, as compile without ziplib!\n");
+            exit(EXIT_FAILURE);
 #endif
         }
         else
         {
-            boost::filesystem::path p = path;
+            CHECK_ARG_FATAL(boost::filesystem::exists(images) && boost::filesystem::is_directory(images));
 
-            if (boost::filesystem::is_directory(p))
+            for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(images), {}))
+                files.push_back(entry.path().filename().string());
+
+            std::sort(files.begin(), files.end());
+
+            for (int i = 0; i < files.size(); ++i)
             {
-                for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(p), {}))
-                    files.push_back(entry.path().filename().string());
-
-                std::sort(files.begin(), files.end());
-
-                for (int i = 0; i < files.size(); ++i)
-                {
-                    files[i] = p.string() + "/" + files[i];
-                    printf("%s \n", files[i].c_str());
-                }
+                files[i] = images.string() + "/" + files[i];
+                LOG_INFO_1("%s \n", files[i].c_str());
             }
         }
 
 
-        undistort = Undistort::getUndistorterForFile(calibFile, gammaFile, vignetteFile);
+        undistort = Undistort::getUndistorterForFile(calibfile.string(), gamma.string(), vignette.string());
 
 
         widthOrg = undistort->getOriginalSize()[0];
@@ -154,10 +134,9 @@ public:
         width = undistort->getSize()[0];
         height = undistort->getSize()[1];
 
-
         // load timestamps if possible.
         loadTimestamps();
-        printf("ImageFolderReader: got %d files in %s!\n", (int)files.size(), path.c_str());
+        LOG_INFO("ImageFolderReader: got %d files in %s!\n", (int)files.size(), images.string().c_str());
 
     }
     ~ImageFolderReader()
@@ -284,7 +263,7 @@ private:
 
             if(readbytes > (long)widthOrg * heightOrg * 6)
             {
-                printf("read %ld/%ld bytes for file %s. increase buffer!!\n", readbytes, (long)widthOrg * heightOrg * 6 + 10000, files[id].c_str());
+                LOG_INFO("read %ld/%ld bytes for file %s. increase buffer!!\n", readbytes, (long)widthOrg * heightOrg * 6 + 10000, files[id].c_str());
                 delete[] databuffer;
                 databuffer = new char[(long)widthOrg * heightOrg * 30];
                 fle = zip_fopen(ziparchive, files[id].c_str(), 0);
@@ -292,14 +271,14 @@ private:
 
                 if(readbytes > (long)widthOrg * heightOrg * 30)
                 {
-                    printf("buffer still to small (read %ld/%ld). abort.\n", readbytes, (long)widthOrg * heightOrg * 30 + 10000);
+                    LOG_INFO("buffer still to small (read %ld/%ld). abort.\n", readbytes, (long)widthOrg * heightOrg * 30 + 10000);
                     exit(1);
                 }
             }
 
             return IOWrap::readStreamBW_8U(databuffer, readbytes);
 #else
-            printf("ERROR: cannot read .zip archive, as compile without ziplib!\n");
+            LOG_ERROR("cannot read .zip archive, as compiled without ziplib!");
             exit(1);
 #endif
         }
@@ -320,8 +299,8 @@ private:
     inline void loadTimestamps()
     {
         std::ifstream tr;
-        std::string timesFile = path.substr(0, path.find_last_of('/')) + "/times.txt";
-        tr.open(timesFile.c_str());
+        boost::filesystem::path timesFile = path / "/times.txt";
+        tr.open(timesFile.string().c_str());
 
         while(!tr.eof() && tr.good())
         {
@@ -385,18 +364,18 @@ private:
 
         if((int)getNumImages() != (int)timestamps.size())
         {
-            printf("set timestamps and exposures to zero!\n");
+            LOG_INFO("set timestamps and exposures to zero!\n");
             exposures.clear();
             timestamps.clear();
         }
 
         if((int)getNumImages() != (int)exposures.size() || !exposuresGood)
         {
-            printf("set EXPOSURES to zero!\n");
+            LOG_INFO("set EXPOSURES to zero!\n");
             exposures.clear();
         }
 
-        printf("got %d images and %d timestamps and %d exposures.!\n", (int)getNumImages(), (int)timestamps.size(), (int)exposures.size());
+        LOG_INFO("got %d images and %d timestamps and %d exposures.!\n", (int)getNumImages(), (int)timestamps.size(), (int)exposures.size());
     }
 
 
@@ -410,8 +389,11 @@ private:
     int width, height;
     int widthOrg, heightOrg;
 
-    std::string path;
-    std::string calibfile;
+    boost::filesystem::path path;
+    boost::filesystem::path images;
+    boost::filesystem::path calibfile;
+    boost::filesystem::path gamma;
+    boost::filesystem::path vignette;
 
     bool isZipped;
 

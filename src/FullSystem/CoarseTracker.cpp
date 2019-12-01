@@ -118,15 +118,15 @@ void CoarseTracker::makeK(CalibHessian* HCalib)
     {
         w[level] = w[0] >> level;
         h[level] = h[0] >> level;
-        fx[level] = fx[level - 1] * 0.5;
-        fy[level] = fy[level - 1] * 0.5;
-        cx[level] = (cx[0] + 0.5) / ((int)1 << level) - 0.5;
-        cy[level] = (cy[0] + 0.5) / ((int)1 << level) - 0.5;
+        fx[level] = fx[level - 1] * 0.5f;
+        fy[level] = fy[level - 1] * 0.5f;
+        cx[level] = (cx[0] + 0.5f) / ((int)1 << level) - 0.5f;
+        cy[level] = (cy[0] + 0.5f) / ((int)1 << level) - 0.5f;
     }
 
     for (int level = 0; level < pyrLevelsUsed; ++ level)
     {
-        K[level]  << fx[level], 0.0, cx[level], 0.0, fy[level], cy[level], 0.0, 0.0, 1.0;
+        K[level]  << fx[level], 0.0f, cx[level], 0.0f, fy[level], cy[level], 0.0f, 0.0f, 1.0f;
         Ki[level] = K[level].inverse();
         fxi[level] = Ki[level](0, 0);
         fyi[level] = Ki[level](1, 1);
@@ -151,8 +151,8 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
             {
                 PointFrameResidual* r = ph->lastResiduals[0].first;
                 assert(r->efResidual->isActive() && r->target == lastRef);
-                int u = r->centerProjectedTo[0] + 0.5f;
-                int v = r->centerProjectedTo[1] + 0.5f;
+                int u = static_cast<int>(r->centerProjectedTo[0] + 0.5f);
+                int v = static_cast<int>(r->centerProjectedTo[1] + 0.5f);
                 float new_idepth = r->centerProjectedTo[2];
                 float weight = sqrtf(1e-3 / (ph->efPoint->HdiF + 1e-12));
 
@@ -331,8 +331,8 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
                 if(weightSumsl[i] > 0)
                 {
                     idepthl[i] /= weightSumsl[i];
-                    lpc_u[lpc_n] = x;
-                    lpc_v[lpc_n] = y;
+                    lpc_u[lpc_n] = static_cast<float>(x);
+                    lpc_v[lpc_n] = static_cast<float>(y);
                     lpc_idepth[lpc_n] = idepthl[i];
                     lpc_color[lpc_n] = dIRefl[i][0];
 
@@ -547,7 +547,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
         {
             if(debugPlot)
             {
-                resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(residual + 128, residual + 128, residual + 128));
+                resImage->setPixel4(lpc_u[i], lpc_v[i],
+                                    Vec3b(static_cast<unsigned char>(residual + 128), static_cast<unsigned char>(residual + 128), static_cast<unsigned char>(residual + 128)));
             }
 
             E += hw * residual * residual * (2 - hw);
@@ -637,7 +638,7 @@ bool CoarseTracker::trackNewestCoarse(
 
     newFrame = newFrameHessian;
     int maxIterations[] = {10, 20, 50, 50, 50};
-    float lambdaExtrapolationLimit = 0.001;
+    float lambdaExtrapolationLimit = 0.001f;
 
     SE3 refToNew_current = lastToNew_out;
     AffLight aff_g2l_current = aff_g2l_out;
@@ -659,24 +660,24 @@ bool CoarseTracker::trackNewestCoarse(
 
             if(!setting_debugout_runquiet)
             {
-                printf("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat, resOld[5]);
+                LOG_INFO("INCREASING cutoff to %f (ratio is %f)!\n", setting_coarseCutoffTH * levelCutoffRepeat, resOld[5]);
             }
         }
 
         calcGSSSE(lvl, H, b, refToNew_current, aff_g2l_current);
 
-        float lambda = 0.01;
+        float lambda = 0.01f;
 
         if(debugPrint)
         {
             Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l, aff_g2l_current).cast<float>();
-            printf("lvl%d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
-                   lvl, -1, lambda, 1.0f,
-                   "INITIA",
-                   0.0f,
-                   resOld[0] / resOld[1],
-                   0, (int)resOld[1],
-                   0.0f);
+            LOG_INFO("lvl%d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
+                     lvl, -1, lambda, 1.0f,
+                     "INITIA",
+                     0.0f,
+                     resOld[0] / resOld[1],
+                     0, (int)resOld[1],
+                     0.0f);
             std::cout << refToNew_current.log().transpose() << " AFF " << aff_g2l_current.vec().transpose() << " (rel " << relAff.transpose() << ")\n";
         }
 
@@ -753,14 +754,14 @@ bool CoarseTracker::trackNewestCoarse(
             if(debugPrint)
             {
                 Vec2f relAff = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure, lastRef_aff_g2l, aff_g2l_new).cast<float>();
-                printf("lvl %d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
-                       lvl, iteration, lambda,
-                       extrapFac,
-                       (accept ? "ACCEPT" : "REJECT"),
-                       resOld[0] / resOld[1],
-                       resNew[0] / resNew[1],
-                       (int)resOld[1], (int)resNew[1],
-                       inc.norm());
+                LOG_INFO("lvl %d, it %d (l=%f / %f) %s: %.3f->%.3f (%d -> %d) (|inc| = %f)! \t",
+                         lvl, iteration, lambda,
+                         extrapFac,
+                         (accept ? "ACCEPT" : "REJECT"),
+                         resOld[0] / resOld[1],
+                         resNew[0] / resNew[1],
+                         (int)resOld[1], (int)resNew[1],
+                         inc.norm());
                 std::cout << refToNew_new.log().transpose() << " AFF " << aff_g2l_new.vec().transpose() << " (rel " << relAff.transpose() << ")\n";
             }
 
@@ -786,7 +787,7 @@ bool CoarseTracker::trackNewestCoarse(
             {
                 if(debugPrint)
                 {
-                    printf("inc too small, break!\n");
+                    LOG_INFO("inc too small, break!\n");
                 }
 
                 break;
@@ -807,7 +808,7 @@ bool CoarseTracker::trackNewestCoarse(
         {
             lvl++;
             haveRepeated = true;
-            printf("REPEAT LEVEL!\n");
+            LOG_INFO("REPEAT LEVEL!\n");
         }
     }
 
@@ -816,8 +817,8 @@ bool CoarseTracker::trackNewestCoarse(
     aff_g2l_out = aff_g2l_current;
 
 
-    if((setting_affineOptModeA != 0 && (fabsf(aff_g2l_out.a) > 1.2))
-       || (setting_affineOptModeB != 0 && (fabsf(aff_g2l_out.b) > 200)))
+    if((setting_affineOptModeA != 0 && (fabsf(aff_g2l_out.a) > 1.2f))
+       || (setting_affineOptModeB != 0 && (fabsf(aff_g2l_out.b) > 200.f)))
     {
         return false;
     }
@@ -869,7 +870,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
         }
 
         std::sort(allID.begin(), allID.end());
-        int n = allID.size() - 1;
+        int n = static_cast<int>(allID.size()) - 1;
 
         float minID_new = allID[(int)(n * 0.05)];
         float maxID_new = allID[(int)(n * 0.95)];
@@ -889,7 +890,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
             {
 
                 // slowly adapt: change by maximum 10% of old span.
-                float maxChange = 0.3 * (*maxID_pt - *minID_pt);
+                float maxChange = 0.3f * (*maxID_pt - *minID_pt);
 
                 if(minID < *minID_pt - maxChange)
                 {
@@ -923,7 +924,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 
         for(int i = 0; i < h[lvl]*w[lvl]; i++)
         {
-            int c = lastRef->dIp[lvl][i][0] * 0.9f;
+            int c = static_cast<int>(lastRef->dIp[lvl][i][0] * 0.9f);
 
             if(c > 255)
             {
@@ -1086,8 +1087,8 @@ void CoarseDistanceMap::makeDistanceMap(
         {
             assert(ph->status == PointHessian::ACTIVE);
             Vec3f ptp = KRKi * Vec3f(ph->u, ph->v, 1) + Kt * ph->idepth_scaled;
-            int u = ptp[0] / ptp[2] + 0.5f;
-            int v = ptp[1] / ptp[2] + 0.5f;
+            int u = static_cast<float>(ptp[0] / ptp[2] + 0.5f);
+            int v = static_cast<float>(ptp[1] / ptp[2] + 0.5f);
 
             if(!(u > 0 && v > 0 && u < w[1] && v < h[1]))
             {
@@ -1123,6 +1124,7 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
         int bfsNum2 = bfsNum;
         std::swap(bfsList1, bfsList2);
         bfsNum = 0;
+        float kk = static_cast<float>(k);
 
         if(k % 2 == 0)
         {
@@ -1138,30 +1140,32 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 
                 int idx = x + y * w1;
 
-                if(fwdWarpedIDDistFinal[idx + 1] > k)
+
+
+                if(fwdWarpedIDDistFinal[idx + 1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx + 1] = k;
+                    fwdWarpedIDDistFinal[idx + 1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x + 1, y);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx - 1] > k)
+                if(fwdWarpedIDDistFinal[idx - 1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx - 1] = k;
+                    fwdWarpedIDDistFinal[idx - 1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x - 1, y);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx + w1] > k)
+                if(fwdWarpedIDDistFinal[idx + w1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx + w1] = k;
+                    fwdWarpedIDDistFinal[idx + w1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x, y + 1);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx - w1] > k)
+                if(fwdWarpedIDDistFinal[idx - w1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx - w1] = k;
+                    fwdWarpedIDDistFinal[idx - w1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x, y - 1);
                     bfsNum++;
                 }
@@ -1181,58 +1185,58 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 
                 int idx = x + y * w1;
 
-                if(fwdWarpedIDDistFinal[idx + 1] > k)
+                if(fwdWarpedIDDistFinal[idx + 1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx + 1] = k;
+                    fwdWarpedIDDistFinal[idx + 1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x + 1, y);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx - 1] > k)
+                if(fwdWarpedIDDistFinal[idx - 1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx - 1] = k;
+                    fwdWarpedIDDistFinal[idx - 1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x - 1, y);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx + w1] > k)
+                if(fwdWarpedIDDistFinal[idx + w1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx + w1] = k;
+                    fwdWarpedIDDistFinal[idx + w1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x, y + 1);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx - w1] > k)
+                if(fwdWarpedIDDistFinal[idx - w1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx - w1] = k;
+                    fwdWarpedIDDistFinal[idx - w1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x, y - 1);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx + 1 + w1] > k)
+                if(fwdWarpedIDDistFinal[idx + 1 + w1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx + 1 + w1] = k;
+                    fwdWarpedIDDistFinal[idx + 1 + w1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x + 1, y + 1);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx - 1 + w1] > k)
+                if(fwdWarpedIDDistFinal[idx - 1 + w1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx - 1 + w1] = k;
+                    fwdWarpedIDDistFinal[idx - 1 + w1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x - 1, y + 1);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx - 1 - w1] > k)
+                if(fwdWarpedIDDistFinal[idx - 1 - w1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx - 1 - w1] = k;
+                    fwdWarpedIDDistFinal[idx - 1 - w1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x - 1, y - 1);
                     bfsNum++;
                 }
 
-                if(fwdWarpedIDDistFinal[idx + 1 - w1] > k)
+                if(fwdWarpedIDDistFinal[idx + 1 - w1] > kk)
                 {
-                    fwdWarpedIDDistFinal[idx + 1 - w1] = k;
+                    fwdWarpedIDDistFinal[idx + 1 - w1] = kk;
                     bfsList1[bfsNum] = Eigen::Vector2i(x + 1, y - 1);
                     bfsNum++;
                 }
@@ -1272,8 +1276,8 @@ void CoarseDistanceMap::makeK(CalibHessian* HCalib)
         h[level] = h[0] >> level;
         fx[level] = fx[level - 1] * 0.5;
         fy[level] = fy[level - 1] * 0.5;
-        cx[level] = (cx[0] + 0.5) / ((int)1 << level) - 0.5;
-        cy[level] = (cy[0] + 0.5) / ((int)1 << level) - 0.5;
+        cx[level] = (cx[0] + 0.5) / ((int)1 << level) - 0.5f;
+        cy[level] = (cy[0] + 0.5) / ((int)1 << level) - 0.5f;
     }
 
     for (int level = 0; level < pyrLevelsUsed; ++ level)

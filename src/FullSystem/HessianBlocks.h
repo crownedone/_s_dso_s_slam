@@ -378,7 +378,7 @@ struct CalibHessian
 
         for(int i = 0; i < 256; i++)
         {
-            Binv[i] = B[i] = i;    // set gamma function to identity
+            Binv[i] = B[i] = static_cast<float>(i);    // set gamma function to identity
         }
     };
 
@@ -459,7 +459,7 @@ struct CalibHessian
 
     EIGEN_STRONG_INLINE float getBGradOnly(float color)
     {
-        int c = color + 0.5f;
+        int c = static_cast<int>(color + 0.5f);
 
         if(c < 5)
         {
@@ -476,7 +476,7 @@ struct CalibHessian
 
     EIGEN_STRONG_INLINE float getBInvGradOnly(float color)
     {
-        int c = color + 0.5f;
+        int c = static_cast<int>(color + 0.5f);
 
         if(c < 5)
         {
@@ -550,7 +550,7 @@ struct PointHessian
     {
         idepth_zero = idepth;
         idepth_zero_scaled = SCALE_IDEPTH * idepth;
-        nullspaces_scale = -(idepth * 1.001 - idepth / 1.001) * 500;
+        nullspaces_scale = static_cast<float>(-(idepth * 1.001f - idepth / 1.001f) * 500.f);
     }
 
 

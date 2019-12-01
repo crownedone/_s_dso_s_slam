@@ -81,7 +81,7 @@ PangolinDSOViewer::~PangolinDSOViewer()
 
 void PangolinDSOViewer::run()
 {
-    printf("START PANGOLIN!\n");
+    LOG_INFO("START PANGOLIN!\n");
 
     pangolin::CreateWindowAndBind("Main", 2 * w, 2 * h);
     const int UI_WIDTH = 180;
@@ -309,7 +309,7 @@ void PangolinDSOViewer::run()
 
         if(settings_resetButton.Get())
         {
-            printf("RESET!\n");
+            LOG_INFO("RESET!\n");
             settings_resetButton.Reset();
             setting_fullResetRequested = true;
         }
@@ -325,8 +325,8 @@ void PangolinDSOViewer::run()
     }
 
 
-    printf("QUIT Pangolin thread!\n");
-    printf("I'll just kill the whole process.\nSo Long, and Thanks for All the Fish!\n");
+    LOG_INFO("QUIT Pangolin thread!\n");
+    LOG_INFO("I'll just kill the whole process.\nSo Long, and Thanks for All the Fish!\n");
 
     exit(1);
 }
@@ -340,7 +340,7 @@ void PangolinDSOViewer::close()
 void PangolinDSOViewer::join()
 {
     runThread.join();
-    printf("JOINED Pangolin thread!\n");
+    LOG_INFO("JOINED Pangolin thread!\n");
 }
 
 void PangolinDSOViewer::reset()
@@ -520,14 +520,18 @@ void PangolinDSOViewer::publishGraph(const std::map<uint64_t, Eigen::Vector2i, s
         totalMargFwd += p.second[1];
 
         uint64_t inverseKey = (((uint64_t)target) << 32) + ((uint64_t)host);
-        Eigen::Vector2i st = connectivity.at(inverseKey);
-        connections[runningID].bwdAct = st[0];
-        connections[runningID].bwdMarg = st[1];
 
-        totalActBwd += st[0];
-        totalMargBwd += st[1];
+        if (inverseKey < connectivity.size())
+        {
+            Eigen::Vector2i st = connectivity.at(inverseKey);
+            connections[runningID].bwdAct = st[0];
+            connections[runningID].bwdMarg = st[1];
+            totalActBwd += st[0];
+            totalMargBwd += st[1];
 
-        runningID++;
+            runningID++;
+
+        }
     }
 
 

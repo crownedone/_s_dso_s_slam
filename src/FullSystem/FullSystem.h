@@ -39,6 +39,8 @@
 #include "util/IndexThreadReduce.h"
 #include "OptimizationBackend/EnergyFunctional.h"
 
+#include <sys/Logging.hpp>
+
 #include <math.h>
 
 namespace dso
