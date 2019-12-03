@@ -185,7 +185,7 @@ public:
 
     int getNumImages()
     {
-        return files.size();
+        return static_cast<int>(files.size());
     }
 
     double getTimestamp(int id)

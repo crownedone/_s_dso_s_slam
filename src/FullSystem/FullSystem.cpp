@@ -939,7 +939,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
     FrameShell* shell = new FrameShell();
     shell->camToWorld = SE3();      // no lock required, as fh is not used anywhere yet.
     shell->aff_g2l = AffLight(0, 0);
-    shell->marginalizedAt = shell->id = allFrameHistory.size();
+    shell->marginalizedAt = shell->id = static_cast<int>(allFrameHistory.size());
     shell->timestamp = image->timestamp;
     shell->incoming_id = id;
     fh->shell = shell;

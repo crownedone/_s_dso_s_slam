@@ -154,7 +154,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
                 int u = static_cast<int>(r->centerProjectedTo[0] + 0.5f);
                 int v = static_cast<int>(r->centerProjectedTo[1] + 0.5f);
                 float new_idepth = r->centerProjectedTo[2];
-                float weight = sqrtf(1e-3 / (ph->efPoint->HdiF + 1e-12));
+                float weight = sqrtf((float)(1e-3) / (ph->efPoint->HdiF + (float)(1e-12)));
 
                 idepth[0][u + w[0]*v] += new_idepth * weight;
                 weightSums[0][u + w[0]*v] += weight;

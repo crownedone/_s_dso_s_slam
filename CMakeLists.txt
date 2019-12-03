@@ -26,7 +26,6 @@ find_package(libzip CONFIG QUIET) # has no cmake windows support and can be foun
 add_definitions("-D__SSE3__")
 add_definitions("-DNOMINMAX")
 add_definitions("-D_USE_MATH_DEFINES")
-#set(CMAKE_CXX_FLAGS_RELEASE "/MT")
 
 if (MSVC)
      set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /bigobj")
@@ -100,6 +99,7 @@ set(dso_IO
 	#${PROJECT_SOURCE_DIR}/src/IOWrapper/OutputWrapper/SampleOutputWrapper.h
 )
 source_group("IO" FILES ${dso_IO})
+
 # Sources files
 set(dso_SOURCE_FILES
   ${dso_UTIL}
@@ -148,24 +148,30 @@ else()
 	set(LIBZIP_LIBRARY "")
 endif()
 
-
-#include_directories(${CSPARSE_INCLUDE_DIR} ${CHOLMOD_INCLUDE_DIR}) 
-	
 add_executable(dso ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin.cpp ${dso_SOURCE_FILES} ${dso_pangolin_SOURCE_FILES})
 
 target_link_libraries(dso gflags)
 target_link_libraries(dso glog::glog)
-target_link_libraries(dso pangolin)
 target_link_libraries(dso opencv_world opencv_img_hash ${__cvcomponent})
 target_link_libraries(dso Boost::system Boost::thread Boost::filesystem)
 target_link_libraries(dso SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl)
-target_include_directories(dso PRIVATE ${Pangolin_INCLUDE_DIRS})
 
+if (Pangolin_FOUND)
+target_link_libraries(dso pangolin)
+target_include_directories(dso PRIVATE ${Pangolin_INCLUDE_DIRS})
 # copy pangolin dlls
 add_custom_command(TARGET dso POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/$<CONFIGURATION>"
     $<TARGET_FILE_DIR:dso>)
+# copy zstd.dll
+add_custom_command(TARGET dso POST_BUILD 
+COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/Release/zstd.dll"
+    $<TARGET_FILE_DIR:dso>)
+
+endif()
+
 
 # copy missing hdf5 and zlib1.dll
 add_custom_command(TARGET dso POST_BUILD 
@@ -177,9 +183,5 @@ COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
     $<TARGET_FILE_DIR:dso>)
 
-# copy zstd.dll
-add_custom_command(TARGET dso POST_BUILD 
-COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-    "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/Release/zstd.dll"
-    $<TARGET_FILE_DIR:dso>)
+
 

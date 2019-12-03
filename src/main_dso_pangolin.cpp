@@ -132,7 +132,7 @@ void settingsDefault(int preset)
                  "- 1-6 LM iteration each KF\n"
                  "- original image resolution\n", preset == 0 ? "no " : "1x");
 
-        playbackSpeed = (preset == 0 ? 0 : 1);
+        playbackSpeed = (preset == 0 ? 0.f : 1.f);
         preload = preset == 1;
         setting_desiredImmatureDensity = 1500;
         setting_desiredPointDensity = 2000;
@@ -153,7 +153,7 @@ void settingsDefault(int preset)
                  "- 1-4 LM iteration each KF\n"
                  "- 424 x 320 image resolution\n", preset == 0 ? "no " : "5x");
 
-        playbackSpeed = (preset == 2 ? 0 : 5);
+        playbackSpeed = (preset == 2 ? 0.f : 5.f);
         preload = preset == 3;
         setting_desiredImmatureDensity = 600;
         setting_desiredPointDensity = 800;
