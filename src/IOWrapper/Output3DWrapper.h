@@ -184,7 +184,7 @@ public:
         Calling:
         Needs to prepare the depth image, so it is only called if [needPushDepthImage()] returned true.
     */
-    virtual void pushDepthImage(MinimalImageB3* image) {}
+    virtual void pushDepthImage(cv::Mat image) {}
     virtual bool needPushDepthImage()
     {
         return false;

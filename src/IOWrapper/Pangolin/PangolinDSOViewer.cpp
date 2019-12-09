@@ -207,17 +207,17 @@ void PangolinDSOViewer::run()
 
         if(videoImgChanged)
         {
-            texVideo.Upload(internalVideoImg->data, GL_BGR, GL_UNSIGNED_BYTE);
+            texVideo.Upload(reinterpret_cast<const void*>(internalVideoImg->data.data), GL_BGR, GL_UNSIGNED_BYTE);
         }
 
         if(kfImgChanged)
         {
-            texKFDepth.Upload(internalKFImg->data, GL_BGR, GL_UNSIGNED_BYTE);
+            texKFDepth.Upload(reinterpret_cast<const void*>(internalKFImg->data.data), GL_BGR, GL_UNSIGNED_BYTE);
         }
 
         if(resImgChanged)
         {
-            texResidual.Upload(internalResImg->data, GL_BGR, GL_UNSIGNED_BYTE);
+            texResidual.Upload(reinterpret_cast<const void*>(internalResImg->data.data), GL_BGR, GL_UNSIGNED_BYTE);
         }
 
         videoImgChanged = kfImgChanged = resImgChanged = false;
@@ -603,23 +603,24 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 
 void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
 {
-    if(!setting_render_displayVideo)
-    {
-        return;
-    }
+	if (!setting_render_displayVideo)
+	{
+		return;
+	}
 
-    if(disableAllDisplay)
-    {
-        return;
-    }
+	if (disableAllDisplay)
+	{
+		return;
+	}
 
-    boost::unique_lock<boost::mutex> lk(openImagesMutex);
+	boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
     for(int i = 0; i < w * h; i++)
-        internalVideoImg->data[i][0] =
-            internalVideoImg->data[i][1] =
-                internalVideoImg->data[i][2] =
+      reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][0] =
+		reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][1] =
+			reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][2] =
                     image->dI[i][0] * 0.8 > 255.0f ? 255.0 : image->dI[i][0] * 0.8;
+
 
     videoImgChanged = true;
 }
@@ -628,7 +629,7 @@ bool PangolinDSOViewer::needPushDepthImage()
 {
     return setting_render_displayDepth;
 }
-void PangolinDSOViewer::pushDepthImage(MinimalImageB3* image)
+void PangolinDSOViewer::pushDepthImage(cv::Mat image)
 {
 
     if(!setting_render_displayDepth)
@@ -654,7 +655,7 @@ void PangolinDSOViewer::pushDepthImage(MinimalImageB3* image)
 
     last_map = time_now;
 
-    memcpy(internalKFImg->data, image->data, w * h * 3);
+	internalKFImg->data = image;
     kfImgChanged = true;
 }
 

@@ -36,6 +36,7 @@
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 #include "IOWrapper/ImageRW.h"
 #include <algorithm>
+#include <opencv2/highgui.hpp>
 
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
@@ -457,7 +458,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
     if(debugPlot)
     {
         resImage = new MinimalImageB3(wl, hl);
-        resImage->setConst(Vec3b(255, 255, 255));
+        //resImage->setConst(Vec3b(255, 255, 255));
+		resImage->data.setTo(cv::Scalar::all(255));
     }
 
     int nl = pc_n[lvl];
@@ -983,10 +985,9 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 
         //IOWrap::displayImage("coarseDepth LVL0", &mf, false);
 
-
         for(IOWrap::Output3DWrapper* ow : wraps)
         {
-            ow->pushDepthImage(&mf);
+            ow->pushDepthImage(mf.data);
         }
 
         if(debugSaveImages)

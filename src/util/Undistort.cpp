@@ -285,7 +285,7 @@ template<typename T>
 void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, float factor)
 {
     int wh = w * h;
-    float* data = output->image;
+    float* data = reinterpret_cast<float*>(output->image.data);
     assert(output->w == w && output->h == h);
     assert(data != 0);
 
@@ -515,14 +515,14 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
         exit(1);
     }
 
-    photometricUndist->processFrame<T>(image_raw->data, exposure, factor);
+    photometricUndist->processFrame<T>(reinterpret_cast<T*>(image_raw->data.data), exposure, factor);
     ImageAndExposure* result = new ImageAndExposure(w, h, timestamp);
     photometricUndist->output->copyMetaTo(*result);
 
     if (!passthrough)
     {
-        float* out_data = result->image;
-        float* in_data = photometricUndist->output->image;
+        float* out_data = reinterpret_cast<float*>(result->image.data);
+        float* in_data = reinterpret_cast<float*>(photometricUndist->output->image.data);
 
         float* noiseMapX = 0;
         float* noiseMapY = 0;
@@ -616,10 +616,10 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
     }
     else
     {
-        memcpy(result->image, photometricUndist->output->image, sizeof(float)*w * h);
+		photometricUndist->output->image.copyTo(result->image);
     }
 
-    applyBlurNoise(result->image);
+    applyBlurNoise(reinterpret_cast<float*>(result->image.data));
 
     return result;
 }
@@ -1477,15 +1477,15 @@ UndistortPinhole::~UndistortPinhole()
 void UndistortPinhole::distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y, int n) const
 {
     // current camera parameters
-    float fx = parsOrg[0];
-    float fy = parsOrg[1];
-    float cx = parsOrg[2];
-    float cy = parsOrg[3];
+    float fx = static_cast<float>(parsOrg[0]);
+    float fy = static_cast<float>(parsOrg[1]);
+    float cx = static_cast<float>(parsOrg[2]);
+    float cy = static_cast<float>(parsOrg[3]);
 
-    float ofx = K(0, 0);
-    float ofy = K(1, 1);
-    float ocx = K(0, 2);
-    float ocy = K(1, 2);
+    float ofx = static_cast<float>(K(0, 0));
+	float ofy = static_cast<float>(K(1, 1));
+	float ocx = static_cast<float>(K(0, 2));
+	float ocy = static_cast<float>(K(1, 2));
 
     for(int i = 0; i < n; i++)
     {

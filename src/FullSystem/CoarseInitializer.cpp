@@ -388,7 +388,7 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
     //IOWrap::displayImage("idepth-R", &iRImg, false);
     for(IOWrap::Output3DWrapper* ow : wraps)
     {
-        ow->pushDepthImage(&iRImg);
+        ow->pushDepthImage(iRImg.data);
     }
 }
 

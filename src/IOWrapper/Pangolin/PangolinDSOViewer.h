@@ -107,7 +107,7 @@ public:
 
 
     virtual void pushLiveFrame(FrameHessian* image) override;
-    virtual void pushDepthImage(MinimalImageB3* image) override;
+    virtual void pushDepthImage(cv::Mat image) override;
     virtual bool needPushDepthImage() override;
 
     virtual void join() override;

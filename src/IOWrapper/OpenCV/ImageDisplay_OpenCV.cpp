@@ -69,7 +69,7 @@ void displayImage(const char* windowName, const cv::Mat& image, bool autoSize)
 }
 
 
-void displayImageStitch(const char* windowName, const std::vector<cv::Mat*> images, int cc, int rc)
+void displayImageStitch(const char* windowName, const std::vector<cv::Mat> images, int cc, int rc)
 {
     if(disableAllDisplay)
     {
@@ -82,8 +82,8 @@ void displayImageStitch(const char* windowName, const std::vector<cv::Mat*> imag
     }
 
     // get dimensions.
-    int w = images[0]->cols;
-    int h = images[0]->rows;
+    int w = images[0].cols;
+    int h = images[0].rows;
 
     int num = std::max((int)setting_maxFrames, (int)images.size());
 
@@ -116,7 +116,7 @@ void displayImageStitch(const char* windowName, const std::vector<cv::Mat*> imag
         bestRC = rc;
     }
 
-    cv::Mat stitch = cv::Mat(bestRC * h, bestCC * w, images[0]->type());
+    cv::Mat stitch = cv::Mat(bestRC * h, bestCC * w, images[0].type());
     stitch.setTo(0);
 
     for(int i = 0; i < (int)images.size() && i < bestCC * bestRC; i++)
@@ -125,7 +125,7 @@ void displayImageStitch(const char* windowName, const std::vector<cv::Mat*> imag
         int r = i / bestCC;
 
         cv::Mat roi = stitch(cv::Rect(c * w, r * h, w, h));
-        images[i]->copyTo(roi);
+        images[i].copyTo(roi);
     }
 
     displayImage(windowName, stitch, false);
@@ -135,89 +135,69 @@ void displayImageStitch(const char* windowName, const std::vector<cv::Mat*> imag
 
 void displayImage(const char* windowName, const MinimalImageB* img, bool autoSize)
 {
-    displayImage(windowName, cv::Mat(img->h, img->w, CV_8U, img->data), autoSize);
+    displayImage(windowName, img->data, autoSize);
 }
 void displayImage(const char* windowName, const MinimalImageB3* img, bool autoSize)
 {
-    displayImage(windowName, cv::Mat(img->h, img->w, CV_8UC3, img->data), autoSize);
+    displayImage(windowName, img->data, autoSize);
 }
 void displayImage(const char* windowName, const MinimalImageF* img, bool autoSize)
 {
-    displayImage(windowName, cv::Mat(img->h, img->w, CV_32F, img->data) * (1 / 254.0f), autoSize);
+    displayImage(windowName, img->data * (1 / 254.0f), autoSize);
 }
 void displayImage(const char* windowName, const MinimalImageF3* img, bool autoSize)
 {
-    displayImage(windowName, cv::Mat(img->h, img->w, CV_32FC3, img->data) * (1 / 254.0f), autoSize);
+    displayImage(windowName, img->data * (1 / 254.0f), autoSize);
 }
 void displayImage(const char* windowName, const MinimalImageB16* img, bool autoSize)
 {
-    displayImage(windowName, cv::Mat(img->h, img->w, CV_16U, img->data), autoSize);
+    displayImage(windowName, img->data, autoSize);
 }
 
 
 void displayImageStitch(const char* windowName, const std::vector<MinimalImageB*> images, int cc, int rc)
 {
-    std::vector<cv::Mat*> imagesCV;
+    std::vector<cv::Mat> imagesCV;
 
     for(size_t i = 0; i < images.size(); i++)
     {
-        imagesCV.push_back(new cv::Mat(images[i]->h, images[i]->w, CV_8U, images[i]->data));
+        imagesCV.push_back(images[i]->data);
     }
 
     displayImageStitch(windowName, imagesCV, cc, rc);
-
-    for(size_t i = 0; i < images.size(); i++)
-    {
-        delete imagesCV[i];
-    }
 }
 void displayImageStitch(const char* windowName, const std::vector<MinimalImageB3*> images, int cc, int rc)
 {
-    std::vector<cv::Mat*> imagesCV;
+    std::vector<cv::Mat> imagesCV;
 
     for(size_t i = 0; i < images.size(); i++)
     {
-        imagesCV.push_back(new cv::Mat(images[i]->h, images[i]->w, CV_8UC3, images[i]->data));
+        imagesCV.push_back(images[i]->data);
     }
 
     displayImageStitch(windowName, imagesCV, cc, rc);
-
-    for(size_t i = 0; i < images.size(); i++)
-    {
-        delete imagesCV[i];
-    }
 }
 void displayImageStitch(const char* windowName, const std::vector<MinimalImageF*> images, int cc, int rc)
 {
-    std::vector<cv::Mat*> imagesCV;
+    std::vector<cv::Mat> imagesCV;
 
     for(size_t i = 0; i < images.size(); i++)
     {
-        imagesCV.push_back(new cv::Mat(images[i]->h, images[i]->w, CV_32F, images[i]->data));
+        imagesCV.push_back(images[i]->data);
     }
 
     displayImageStitch(windowName, imagesCV, cc, rc);
-
-    for(size_t i = 0; i < images.size(); i++)
-    {
-        delete imagesCV[i];
-    }
 }
 void displayImageStitch(const char* windowName, const std::vector<MinimalImageF3*> images, int cc, int rc)
 {
-    std::vector<cv::Mat*> imagesCV;
+    std::vector<cv::Mat> imagesCV;
 
     for(size_t i = 0; i < images.size(); i++)
     {
-        imagesCV.push_back(new cv::Mat(images[i]->h, images[i]->w, CV_32FC3, images[i]->data));
+        imagesCV.push_back(images[i]->data);
     }
 
     displayImageStitch(windowName, imagesCV, cc, rc);
-
-    for(size_t i = 0; i < images.size(); i++)
-    {
-        delete imagesCV[i];
-    }
 }
 
 

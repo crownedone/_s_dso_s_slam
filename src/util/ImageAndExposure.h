@@ -25,7 +25,7 @@
 #pragma once
 #include <cstring>
 #include <iostream>
-
+#include <opencv2/core/mat.hpp>
 
 namespace dso
 {
@@ -35,18 +35,14 @@ class ImageAndExposure
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    float* image;           // irradiance. between 0 and 256
+	cv::Mat image;          // irradiance. between 0 and 256
     int w, h;               // width and height;
     double timestamp;
     float exposure_time;    // exposure time in ms.
     inline ImageAndExposure(int w_, int h_, double timestamp_ = 0) : w(w_), h(h_), timestamp(timestamp_)
     {
-        image = new float[w * h];
+        image = cv::Mat(h, w, CV_32FC1);
         exposure_time = 1;
-    }
-    inline ~ImageAndExposure()
-    {
-        delete[] image;
     }
 
     inline void copyMetaTo(ImageAndExposure& other)
@@ -58,7 +54,7 @@ public:
     {
         ImageAndExposure* img = new ImageAndExposure(w, h, timestamp);
         img->exposure_time = exposure_time;
-        memcpy(img->image, image, w * h * sizeof(float));
+		image.copyTo(img->image);
         return img;
     }
 };

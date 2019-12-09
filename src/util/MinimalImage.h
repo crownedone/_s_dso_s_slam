@@ -26,6 +26,36 @@
 
 #include "util/NumType.h"
 #include "algorithm"
+#include <opencv2/core/mat.hpp>
+namespace cv
+{
+template<> class cv::DataType<Eigen::Matrix<unsigned char, 3, 1>>
+{
+public:
+	typedef Eigen::Matrix<unsigned char, 3, 1> value_type;
+	typedef value_type work_type;
+	typedef unsigned char channel_type;
+	typedef value_type vec_type;
+	enum {
+		depth = CV_8U, channels = (int)sizeof(value_type) / sizeof(channel_type),
+		type = CV_MAKETYPE(depth, channels), fmt = DataType<channel_type>::fmt + ((channels - 1) << 8)
+	};
+};
+
+template<> class cv::DataType<Eigen::Matrix<float, 3, 1>>
+{
+public:
+	typedef Eigen::Matrix<float, 3, 1> value_type;
+	typedef value_type work_type;
+	typedef float channel_type;
+	typedef value_type vec_type;
+	enum {
+		depth = CV_32F, channels = (int)sizeof(value_type) / sizeof(channel_type),
+		type = CV_MAKETYPE(depth, channels), fmt = DataType<channel_type>::fmt + ((channels - 1) << 8)
+	};
+};
+}
+
 
 namespace dso
 {
@@ -37,15 +67,15 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     int w;
     int h;
-    T* data;
+    cv::Mat data;
 
     /*
         creates minimal image with own memory
     */
     inline MinimalImage(int w_, int h_) : w(w_), h(h_)
     {
-        data = new T[w * h];
-        ownData = true;
+		data = cv::Mat_<T>(h, w);
+		ownData = true;
     }
 
     /*
@@ -53,52 +83,38 @@ public:
     */
     inline MinimalImage(int w_, int h_, T* data_) : w(w_), h(h_)
     {
-        data = data_;
+        data = cv::Mat_<T>(h, w, data_, cv::Mat::AUTO_STEP);
         ownData = false;
     }
 
-    inline ~MinimalImage()
+    inline std::shared_ptr<MinimalImage> getClone()
     {
-        if(ownData)
-        {
-            delete [] data;
-        }
-    }
-
-    inline MinimalImage* getClone()
-    {
-        MinimalImage* clone = new MinimalImage(w, h);
-        memcpy(clone->data, data, sizeof(T)*w * h);
+        auto clone = std::make_shared<MinimalImage>(w, h, type);
+		data.copyTo(clone->data);
         return clone;
     }
-
+	
 
     inline T& at(int x, int y)
     {
-        return data[(int)x + ((int)y) * w];
+        return data.ptr<T>(y)[x];
     }
+
     inline T& at(int i)
     {
-        return data[i];
+        return data.ptr<T>(0)[i];
     }
 
     inline void setBlack()
     {
-        memset(data, 0, sizeof(T)*w * h);
-    }
-
-    inline void setConst(T val)
-    {
-        for(int i = 0; i < w * h; i++)
-        {
-            data[i] = val;
-        }
+		data.setTo(cv::Scalar::all(0));
     }
 
     inline void setPixel1(const float& u, const float& v, T val)
     {
         at(static_cast<int>(u + 0.5f), static_cast<int>(v + 0.5f)) = val;
     }
+
 
     inline void setPixel4(const float& uu, const float& vv, T val)
     {
@@ -109,6 +125,7 @@ public:
         at(u, v + 1) = val;
         at(u, v) = val;
     }
+
 
     inline void setPixel9(const int& u, const int& v, T val)
     {
@@ -122,6 +139,7 @@ public:
         at(u - 1, v) = val;
         at(u - 1, v + 1) = val;
     }
+
 
     inline void setPixelCirc(const int& u, const int& v, T val)
     {
@@ -139,6 +157,7 @@ public:
         }
     }
 
+
     inline void setPixelCirc(const float& uu, const float& vv, T val)
     {
         int u = static_cast<int>(uu);
@@ -146,35 +165,8 @@ public:
         setPixelCirc(u, v, val);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-private:
-    bool ownData;
+	private:
+		bool ownData;
 };
 
 typedef Eigen::Matrix<unsigned char, 3, 1> Vec3b;
@@ -183,6 +175,5 @@ typedef MinimalImage<Vec3f> MinimalImageF3;
 typedef MinimalImage<unsigned char> MinimalImageB;
 typedef MinimalImage<Vec3b> MinimalImageB3;
 typedef MinimalImage<unsigned short> MinimalImageB16;
-
 }
 

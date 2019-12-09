@@ -948,7 +948,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
     // =========================== make Images / derivatives etc. =========================
     fh->ab_exposure = image->exposure_time;
-    fh->makeImages(image->image, &Hcalib);
+    fh->makeImages(reinterpret_cast<float*>(image->image.data), &Hcalib);
 
 
     if(!initialized)
