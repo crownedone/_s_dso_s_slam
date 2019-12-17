@@ -488,11 +488,8 @@ float FullSystem::optimize(int mnumOptIts)
             numPoints++;
         }
 
-    if(!setting_debugout_runquiet)
-    {
-        LOG_INFO("OPTIMIZE %d pts, %d active res, %d lin res!\n", ef->nPoints, (int)activeResiduals.size(), numLRes);
-    }
 
+    LOG_INFO_IF(!setting_debugout_runquiet, "OPTIMIZE %d pts, %d active res, %d lin res!\n", ef->nPoints, (int)activeResiduals.size(), numLRes);
 
     Vec3 lastEnergy = linearizeAll(false);
     double lastEnergyL = calcLEnergy();
@@ -561,17 +558,10 @@ float FullSystem::optimize(int mnumOptIts)
         bool canbreak = doStepFromBackup(stepsize, stepsize, stepsize, stepsize, stepsize);
 
 
-
-
-
-
-
         // eval new energy!
         Vec3 newEnergy = linearizeAll(false);
         double newEnergyL = calcLEnergy();
         double newEnergyM = calcMEnergy();
-
-
 
 
         if(!setting_debugout_runquiet)

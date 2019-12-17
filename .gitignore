@@ -8,3 +8,6 @@ build-*
 *.a
 *.so.*
 thirdparty/libzip-1.1.1
+/thirdparty/Pangolin
+/.vs
+/CMakeSettings.json

@@ -55,7 +55,7 @@
 
 // Path to the sequence folder.
 DEFINE_string(sequenceFolder, "", "path to your sequence Folder");
-DEFINE_bool(runQuiet, false, "Disable debug output");
+DEFINE_bool(runQuiet, true, "Disable debug output");
 DEFINE_bool(useSampleOutput, false, "Disable debug output");
 DEFINE_int32(preset, 0, \
              "0 - DEFAULT settings : \n"\
@@ -181,9 +181,11 @@ int main( int argc, char** argv )
     FLAGS_alsologtostderr = 1;
     FLAGS_colorlogtostderr = 1;
 
-    LOG_INFO("Starting MediaSystem:");
+    LOG_INFO("Starting DSO:");
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
+
+    // Only valid with sequence:
     if (FLAGS_sequenceFolder.empty())
     {
         LOG_ERROR("missing argument --sequenceFolder=X");
@@ -283,6 +285,7 @@ int main( int argc, char** argv )
 
         double sInitializerOffset = 0;
 
+        StopWatch sw;
 
         for(int ii = 0; ii < (int)idsToPlay.size(); ii++)
         {
@@ -364,6 +367,7 @@ int main( int argc, char** argv )
                 break;
             }
 
+            LOG_WARNING("Cycle: %f [ms]", sw.restart());
         }
 
         fullSystem->blockUntilMappingIsFinished();

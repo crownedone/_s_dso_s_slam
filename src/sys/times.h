@@ -9,7 +9,12 @@
 #include <sys/timeb.h>
 #include <sys/types.h>
 #include <WinSock2.h>
+#else
+#include <chrono>
+#endif
 
+
+#ifdef _WIN32
 //int gettimeofday(struct timeval* t,void* timezone);
 
 #define __need_clock_t
@@ -43,4 +48,32 @@ clock_t times (struct tms* __buffer);
 typedef long long suseconds_t ;
 
 #endif
+
+/// Linux and Windows compatible Stopwatch class
+class StopWatch
+{
+private:
+	// MSVC does not have a high_resolution_clock in chrono until VS2015
+#if defined(WIN32)
+	/// First time point.
+	int64_t mStart;
+#else
+	/// First time point.
+	std::chrono::high_resolution_clock::time_point mStart;
+#endif
+
+public:
+	/// Start is automatically called.
+	StopWatch();
+
+	/// Start stop watch.
+	void start();
+
+	/// Stop and return time in milliseconds.
+	double stop();
+
+	/// Restarts timer and returns time until now.
+	double restart();
+};
+
 #endif

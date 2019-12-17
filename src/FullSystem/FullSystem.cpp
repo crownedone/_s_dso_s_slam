@@ -53,6 +53,7 @@
 #include "IOWrapper/Output3DWrapper.h"
 
 #include "util/ImageAndExposure.h"
+#include "sys/times.h"
 
 #include <cmath>
 
@@ -478,12 +479,7 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
         coarseTracker->firstCoarseRMSE = achievedRes[0];
     }
 
-    if(!setting_debugout_runquiet)
-    {
-        LOG_INFO("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
-    }
-
-
+    LOG_INFO_IF(!setting_debugout_runquiet, "Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
 
     if(setting_logStuff)
     {
@@ -933,7 +929,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
     boost::unique_lock<boost::mutex> lock(trackMutex);
 
-
+    StopWatch sw;
     // =========================== add into allFrameHistory =========================
     FrameHessian* fh = new FrameHessian();
     FrameShell* shell = new FrameShell();
@@ -950,6 +946,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
     fh->ab_exposure = image->exposure_time;
     fh->makeImages(reinterpret_cast<float*>(image->image.data), &Hcalib);
 
+    LOG_INFO("Make images: %f ", sw.restart());
 
     if(!initialized)
     {
@@ -1026,6 +1023,8 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
         lock.unlock();
         deliverTrackedFrame(fh, needToMakeKF);
+
+        LOG_INFO("Rest: %f ", sw.restart());
         return;
     }
 }
@@ -1531,19 +1530,18 @@ void FullSystem::printLogLine()
         return;
     }
 
-    if(!setting_debugout_runquiet)
-        LOG_INFO("LOG %d: %.3f fine. Res: %d A, %d L, %d M; (%d / %d) forceDrop. a=%f, b=%f. Window %d (%d)\n",
-                 allKeyFramesHistory.back()->id,
-                 statistics_lastFineTrackRMSE,
-                 ef->resInA,
-                 ef->resInL,
-                 ef->resInM,
-                 (int)statistics_numForceDroppedResFwd,
-                 (int)statistics_numForceDroppedResBwd,
-                 allKeyFramesHistory.back()->aff_g2l.a,
-                 allKeyFramesHistory.back()->aff_g2l.b,
-                 frameHessians.back()->shell->id - frameHessians.front()->shell->id,
-                 (int)frameHessians.size());
+    LOG_INFO_IF(!setting_debugout_runquiet, "LOG %d: %.3f fine. Res: %d A, %d L, %d M; (%d / %d) forceDrop. a=%f, b=%f. Window %d (%d)\n",
+                allKeyFramesHistory.back()->id,
+                statistics_lastFineTrackRMSE,
+                ef->resInA,
+                ef->resInL,
+                ef->resInM,
+                (int)statistics_numForceDroppedResFwd,
+                (int)statistics_numForceDroppedResBwd,
+                allKeyFramesHistory.back()->aff_g2l.a,
+                allKeyFramesHistory.back()->aff_g2l.b,
+                frameHessians.back()->shell->id - frameHessians.front()->shell->id,
+                (int)frameHessians.size());
 
 
     if(!setting_logStuff)

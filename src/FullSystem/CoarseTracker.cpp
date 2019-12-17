@@ -36,7 +36,6 @@
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 #include "IOWrapper/ImageRW.h"
 #include <algorithm>
-#include <opencv2/highgui.hpp>
 
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
