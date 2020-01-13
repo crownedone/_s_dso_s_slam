@@ -40,7 +40,7 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, Ca
         int dx = patternP[idx][0];
         int dy = patternP[idx][1];
 
-        Vec3f ptc = getInterpolatedElement33BiLin(host->dI, u + dx, v + dy, wG[0]);
+        Vec3f ptc = getInterpolatedElement33BiLin(host->dI.ptr<Eigen::Vector3f>(), u + dx, v + dy, wG[0]);
 
 
 
@@ -302,7 +302,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
         for(int idx = 0; idx < patternNum; idx++)
         {
-            float hitColor = getInterpolatedElement31(frame->dI,
+            float hitColor = getInterpolatedElement31(frame->dI.ptr<Eigen::Vector3f>(),
                                                       (float)(ptx + rotatetPattern[idx][0]),
                                                       (float)(pty + rotatetPattern[idx][1]),
                                                       wG[0]);
@@ -373,7 +373,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
         for(int idx = 0; idx < patternNum; idx++)
         {
-            Vec3f hitColor = getInterpolatedElement33(frame->dI,
+            Vec3f hitColor = getInterpolatedElement33(frame->dI.ptr<Eigen::Vector3f>(),
                                                       (float)(bestU + rotatetPattern[idx][0]),
                                                       (float)(bestV + rotatetPattern[idx][1]), wG[0]);
 
@@ -537,7 +537,7 @@ float ImmaturePoint::calcResidual(
     FrameFramePrecalc* precalc = &(host->targetPrecalc[tmpRes->target->idx]);
 
     float energyLeft = 0;
-    const Eigen::Vector3f* dIl = tmpRes->target->dI;
+    const Eigen::Vector3f* dIl = tmpRes->target->dI.ptr<Eigen::Vector3f>();
     const Mat33f& PRE_KRKiTll = precalc->PRE_KRKiTll;
     const Vec3f& PRE_KtTll = precalc->PRE_KtTll;
     Vec2f affLL = precalc->PRE_aff_mode;
@@ -594,7 +594,7 @@ double ImmaturePoint::linearizeResidual(
     // check OOB due to scale angle change.
 
     float energyLeft = 0;
-    const Eigen::Vector3f* dIl = tmpRes->target->dI;
+    const Eigen::Vector3f* dIl = tmpRes->target->dI.ptr<Eigen::Vector3f>();
     const Mat33f& PRE_RTll = precalc->PRE_RTll;
     const Vec3f& PRE_tTll = precalc->PRE_tTll;
     //const float * const Il = tmpRes->target->I;

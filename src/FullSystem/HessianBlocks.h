@@ -119,13 +119,9 @@ struct FrameHessian
     //DepthImageWrap* frame;
     FrameShell* shell;
 
-    Eigen::Vector3f* dI;                 // trace, fine tracking. Used for direction select (not for gradient histograms etc.)
-    Eigen::Vector3f* dIp[PYR_LEVELS];    // coarse tracking / coarse initializer. NAN in [0] only.
-    float* absSquaredGrad[PYR_LEVELS];  // only used for pixel select (histograms etc.). no NAN.
-
-
-
-
+    cv::Mat dI;                                     // trace, fine tracking. Used for direction select (not for gradient histograms etc.)
+    std::array<cv::Mat, PYR_LEVELS> dIp;            // coarse tracking / coarse initializer. NAN in [0] only.
+    std::array<cv::Mat, PYR_LEVELS> absSquaredGrad; // only used for pixel select (histograms etc.). no NAN.
 
 
     int frameID;                        // incremental ID for keyframes only!
@@ -261,15 +257,6 @@ struct FrameHessian
         release();
         instanceCounter--;
 
-        for(int i = 0; i < pyrLevelsUsed; i++)
-        {
-            delete[] dIp[i];
-            delete[]  absSquaredGrad[i];
-
-        }
-
-
-
         if(debugImage != 0)
         {
             delete debugImage;
@@ -283,13 +270,11 @@ struct FrameHessian
         efFrame = 0;
         frameEnergyTH = 8 * 8 * patternNum;
 
-
-
         debugImage = 0;
     };
 
 
-    void makeImages(float* color, CalibHessian* HCalib);
+    void makeImages(cv::Mat color, CalibHessian* HCalib);
 
     inline Vec10 getPrior()
     {

@@ -28,6 +28,8 @@
 #include "FullSystem/ImmaturePoint.h"
 #include "OptimizationBackend/EnergyFunctionalStructs.h"
 #include <Eigen/LU>
+#include <opencv2/imgproc.hpp>
+
 namespace dso
 {
 
@@ -147,50 +149,36 @@ void FrameHessian::release()
 }
 
 
-void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
+void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
 {
+    cv::Mat zero(hG[0], wG[0], CV_32FC1, cv::Scalar(0.f));
+    std::vector<cv::Mat> arr = { color, zero, zero };
+    cv::merge(arr, dIp[0]);
+    absSquaredGrad[0] = cv::Mat(hG[0], wG[0], CV_32FC1);
 
-    for(int i = 0; i < pyrLevelsUsed; i++)
+    for(int i = 1; i < pyrLevelsUsed; i++)
     {
-        dIp[i] = new Eigen::Vector3f[wG[i]*hG[i]];
-        absSquaredGrad[i] = new float[wG[i]*hG[i]];
+        dIp[i] = cv::Mat(hG[i], wG[i], CV_32FC3);
+        absSquaredGrad[i] = cv::Mat(hG[i], wG[i], CV_32FC1);
     }
 
     dI = dIp[0];
-
 
     // make d0
     int w = wG[0];
     int h = hG[0];
 
-    for(int i = 0; i < w * h; i++)
-    {
-        dI[i][0] = color[i];
-    }
-
     for(int lvl = 0; lvl < pyrLevelsUsed; lvl++)
     {
         int wl = wG[lvl], hl = hG[lvl];
-        Eigen::Vector3f* dI_l = dIp[lvl];
+        Eigen::Vector3f* dI_l = dIp[lvl].ptr<Eigen::Vector3f>();
 
-        float* dabs_l = absSquaredGrad[lvl];
+        float* dabs_l = absSquaredGrad[lvl].ptr<float>();
 
         if(lvl > 0)
         {
             int lvlm1 = lvl - 1;
-            int wlm1 = wG[lvlm1];
-            Eigen::Vector3f* dI_lm = dIp[lvlm1];
-
-
-
-            for(int y = 0; y < hl; y++)
-                for(int x = 0; x < wl; x++)
-                {
-                    dI_l[x + y * wl][0] = 0.25f * (dI_lm[2 * x   + 2 * y * wlm1][0] +
-                                                   dI_lm[2 * x + 1 + 2 * y * wlm1][0] +
-                                                   dI_lm[2 * x   + 2 * y * wlm1 + wlm1][0] +
-                                                   dI_lm[2 * x + 1 + 2 * y * wlm1 + wlm1][0]);
-                }
+            cv::resize(dIp[lvlm1], dIp[lvl], dIp[lvl].size(), 0.0, 0.0, cv::InterpolationFlags::INTER_LINEAR);
         }
 
         for(int idx = wl; idx < wl * (hl - 1); idx++)
@@ -211,7 +199,6 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 
             dI_l[idx][1] = dx;
             dI_l[idx][2] = dy;
-
 
             dabs_l[idx] = dx * dx + dy * dy;
 

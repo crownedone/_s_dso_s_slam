@@ -944,7 +944,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
     // =========================== make Images / derivatives etc. =========================
     fh->ab_exposure = image->exposure_time;
-    fh->makeImages(reinterpret_cast<float*>(image->image.data), &Hcalib);
+    fh->makeImages(image->image, &Hcalib);
 
     LOG_INFO("Make images: %f ", sw.restart());
 
@@ -1036,7 +1036,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
     {
         if(goStepByStep && lastRefStopID != coarseTracker->refFrameID)
         {
-            MinimalImageF3 img(wG[0], hG[0], fh->dI);
+            MinimalImageF3 img(wG[0], hG[0], fh->dI.ptr<Eigen::Vector3f>());
             IOWrap::displayImage("frameToTrack", &img);
 
             while(true)

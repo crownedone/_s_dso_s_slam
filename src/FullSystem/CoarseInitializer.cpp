@@ -340,7 +340,7 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 
 
     int wl = w[lvl], hl = h[lvl];
-    Eigen::Vector3f* colorRef = firstFrame->dIp[lvl];
+    Eigen::Vector3f* colorRef = firstFrame->dIp[lvl].ptr<Eigen::Vector3f>();
 
     MinimalImageB3 iRImg(wl, hl);
 
@@ -400,8 +400,8 @@ Vec3f CoarseInitializer::calcResAndGS(
     bool plot)
 {
     int wl = w[lvl], hl = h[lvl];
-    Eigen::Vector3f* colorRef = firstFrame->dIp[lvl];
-    Eigen::Vector3f* colorNew = newFrame->dIp[lvl];
+    Eigen::Vector3f* colorRef = firstFrame->dIp[lvl].ptr<Eigen::Vector3f>();
+    Eigen::Vector3f* colorNew = newFrame->dIp[lvl].ptr<Eigen::Vector3f>();
 
     Mat33f RKi = (refToNew.rotationMatrix() * Ki[lvl]).cast<float>();
     Vec3f t = refToNew.translation().cast<float>();
@@ -914,7 +914,7 @@ void CoarseInitializer::setFirst(   CalibHessian* HCalib, FrameHessian* newFrame
         }
         else
         {
-            npts = makePixelStatus(firstFrame->dIp[lvl], statusMapB, w[lvl], h[lvl], densities[lvl] * w[0] * h[0]);
+            npts = makePixelStatus(firstFrame->dIp[lvl].ptr<Eigen::Vector3f>(), statusMapB, w[lvl], h[lvl], densities[lvl] * w[0] * h[0]);
         }
 
 
@@ -948,7 +948,7 @@ void CoarseInitializer::setFirst(   CalibHessian* HCalib, FrameHessian* newFrame
                     pl[nl].lastHessian_new = 0;
                     pl[nl].my_type = (lvl != 0) ? 1.f : statusMap[x + y * wl];
 
-                    Eigen::Vector3f* cpt = firstFrame->dIp[lvl] + x + y * w[lvl];
+                    Eigen::Vector3f* cpt = firstFrame->dIp[lvl].ptr<Eigen::Vector3f>() + x + y * w[lvl];
                     float sumGrad2 = 0;
 
                     for(int idx = 0; idx < patternNum; idx++)

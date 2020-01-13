@@ -312,7 +312,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
     {
         float* weightSumsl = weightSums[lvl];
         float* idepthl = idepth[lvl];
-        Eigen::Vector3f* dIRefl = lastRef->dIp[lvl];
+        Eigen::Vector3f* dIRefl = lastRef->dIp[lvl].ptr<Eigen::Vector3f>();
 
         int wl = w[lvl], hl = h[lvl];
 
@@ -433,7 +433,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
 
     int wl = w[lvl];
     int hl = h[lvl];
-    Eigen::Vector3f* dINewl = newFrame->dIp[lvl];
+    Eigen::Vector3f* dINewl = newFrame->dIp[lvl].ptr<Eigen::Vector3f>();
     float fxl = fx[lvl];
     float fyl = fy[lvl];
     float cxl = cx[lvl];
@@ -458,7 +458,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
     {
         resImage = new MinimalImageB3(wl, hl);
         //resImage->setConst(Vec3b(255, 255, 255));
-		resImage->data.setTo(cv::Scalar::all(255));
+        resImage->data.setTo(cv::Scalar::all(255));
     }
 
     int nl = pc_n[lvl];
@@ -925,7 +925,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt, std::ve
 
         for(int i = 0; i < h[lvl]*w[lvl]; i++)
         {
-            int c = static_cast<int>(lastRef->dIp[lvl][i][0] * 0.9f);
+            int c = static_cast<int>(lastRef->dIp[lvl].ptr<Eigen::Vector3f>()[i][0] * 0.9f);
 
             if(c > 255)
             {

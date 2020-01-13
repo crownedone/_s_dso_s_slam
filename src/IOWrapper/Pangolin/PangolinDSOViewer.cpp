@@ -603,23 +603,23 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 
 void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
 {
-	if (!setting_render_displayVideo)
-	{
-		return;
-	}
+    if (!setting_render_displayVideo)
+    {
+        return;
+    }
 
-	if (disableAllDisplay)
-	{
-		return;
-	}
+    if (disableAllDisplay)
+    {
+        return;
+    }
 
-	boost::unique_lock<boost::mutex> lk(openImagesMutex);
+    boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
     for(int i = 0; i < w * h; i++)
-      reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][0] =
-		reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][1] =
-			reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][2] =
-                    image->dI[i][0] * 0.8 > 255.0f ? 255.0 : image->dI[i][0] * 0.8;
+        reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][0] =
+            reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][1] =
+                reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][2] =
+                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.0 : image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8;
 
 
     videoImgChanged = true;
@@ -655,7 +655,7 @@ void PangolinDSOViewer::pushDepthImage(cv::Mat image)
 
     last_map = time_now;
 
-	internalKFImg->data = image;
+    internalKFImg->data = image;
     kfImgChanged = true;
 }
 

@@ -88,7 +88,7 @@ int computeHistQuantil(int* hist, float below)
 void PixelSelector::makeHists(const FrameHessian* const fh)
 {
     gradHistFrame = fh;
-    float* mapmax0 = fh->absSquaredGrad[0];
+    const float* mapmax0 = fh->absSquaredGrad[0].ptr<float>();
 
     int w = wG[0];
     int h = hG[0];
@@ -100,7 +100,7 @@ void PixelSelector::makeHists(const FrameHessian* const fh)
     for(int y = 0; y < h32; y++)
         for(int x = 0; x < w32; x++)
         {
-            float* map0 = mapmax0 + 32 * x + 32 * y * w;
+            const float* map0 = mapmax0 + 32 * x + 32 * y * w;
             int* hist0 = gradHist;// + 50*(x+y*w32);
             memset(hist0, 0, sizeof(int) * 50);
 
@@ -336,7 +336,7 @@ int PixelSelector::makeMaps(
 
         for(int i = 0; i < w * h; i++)
         {
-            float c = fh->dI[i][0] * 0.7;
+            float c = fh->dI.ptr<Eigen::Vector3f>()[i][0] * 0.7;
 
             if(c > 255)
             {
@@ -379,11 +379,11 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
                                       float* map_out, int pot, float thFactor)
 {
 
-    Eigen::Vector3f const* const map0 = fh->dI;
+    Eigen::Vector3f const* const map0 = fh->dI.ptr<Eigen::Vector3f>();
 
-    float* mapmax0 = fh->absSquaredGrad[0];
-    float* mapmax1 = fh->absSquaredGrad[1];
-    float* mapmax2 = fh->absSquaredGrad[2];
+    const float* mapmax0 = fh->absSquaredGrad[0].ptr<float>();
+    const float* mapmax1 = fh->absSquaredGrad[1].ptr<float>();
+    const float* mapmax2 = fh->absSquaredGrad[2].ptr<float>();
 
 
     int w = wG[0];
