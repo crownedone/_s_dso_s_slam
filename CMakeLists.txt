@@ -215,6 +215,10 @@ add_custom_command(TARGET dso POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
     $<TARGET_FILE_DIR:dso>)
+add_custom_command(TARGET dso POST_BUILD 
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    ${_VCPKG_INSTALLED_DIR}/x64-windows/debug/bin/gflags_debug.dll
+    $<TARGET_FILE_DIR:dso>)
 
 	# copy missing hdf5 and zlib1.dll
 add_custom_command(TARGET dsoTests POST_BUILD 
@@ -225,6 +229,7 @@ add_custom_command(TARGET dsoTests POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
     $<TARGET_FILE_DIR:dsoTests>)
-
-
-
+add_custom_command(TARGET dsoTests POST_BUILD 
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    ${_VCPKG_INSTALLED_DIR}/x64-windows/debug/bin/gflags_debug.dll
+    $<TARGET_FILE_DIR:dsoTests>)
