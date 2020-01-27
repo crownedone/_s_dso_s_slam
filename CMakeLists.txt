@@ -21,6 +21,8 @@ find_package(glog CONFIG REQUIRED)
 find_package(Pangolin CONFIG QUIET)
 find_package(libzip CONFIG QUIET) # has no cmake windows support and can be found with pkg-config if needed.
 
+# Testing
+find_package(Catch2 CONFIG REQUIRED)
 
 # flags
 add_definitions("-D__SSE3__")
@@ -109,6 +111,16 @@ set(dso_SOURCE_FILES
   ${dso_IO}
 )
 
+set(dso_TESTS
+  ${PROJECT_SOURCE_DIR}/tests/SampleTest.cpp
+)
+source_group("tests" FILES ${dso_TESTS})
+
+set(dso_TEST_CASES
+  ${dso_SOURCE_FILES}
+  ${dso_TESTS}
+)
+
 set(SOPHUS_SOURCE_DIR ${_VCPKG_INSTALLED_DIR}/x64-windows/include/)
 include_directories(
   ${PROJECT_SOURCE_DIR}/src
@@ -149,12 +161,20 @@ else()
 endif()
 
 add_executable(dso ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin.cpp ${dso_SOURCE_FILES} ${dso_pangolin_SOURCE_FILES})
+add_executable(dsoTests ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${dso_TEST_CASES} ${dso_pangolin_SOURCE_FILES})
 
 target_link_libraries(dso gflags)
 target_link_libraries(dso glog::glog)
 target_link_libraries(dso opencv_world opencv_img_hash ${__cvcomponent})
 target_link_libraries(dso Boost::system Boost::thread Boost::filesystem)
 target_link_libraries(dso SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl)
+
+target_link_libraries(dsoTests gflags)
+target_link_libraries(dsoTests glog::glog)
+target_link_libraries(dsoTests opencv_world opencv_img_hash ${__cvcomponent})
+target_link_libraries(dsoTests Boost::system Boost::thread Boost::filesystem)
+target_link_libraries(dsoTests SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl)
+target_link_libraries(dsoTests Catch2::Catch2)
 
 if (Pangolin_FOUND)
 target_link_libraries(dso pangolin)
@@ -170,6 +190,19 @@ COMMAND ${CMAKE_COMMAND} -E copy_if_different
     "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/Release/zstd.dll"
     $<TARGET_FILE_DIR:dso>)
 
+
+target_link_libraries(dsoTests pangolin)
+target_include_directories(dsoTests PRIVATE ${Pangolin_INCLUDE_DIRS})
+# copy pangolin dlls
+add_custom_command(TARGET dsoTests POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/$<CONFIGURATION>"
+    $<TARGET_FILE_DIR:dsoTests>)
+# copy zstd.dll
+add_custom_command(TARGET dsoTests POST_BUILD 
+COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/Release/zstd.dll"
+    $<TARGET_FILE_DIR:dso>)
 endif()
 
 
@@ -182,6 +215,16 @@ add_custom_command(TARGET dso POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
     $<TARGET_FILE_DIR:dso>)
+
+	# copy missing hdf5 and zlib1.dll
+add_custom_command(TARGET dsoTests POST_BUILD 
+COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/hdf5.dll
+    $<TARGET_FILE_DIR:dsoTests>)
+add_custom_command(TARGET dsoTests POST_BUILD 
+COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
+    $<TARGET_FILE_DIR:dsoTests>)
 
 
 
