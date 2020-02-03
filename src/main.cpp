@@ -22,7 +22,7 @@
 */
 
 
-
+#include "util/Input.hpp"
 #include <thread>
 #include <locale.h>
 #include <signal.h>
@@ -99,7 +99,8 @@ static bool ValidateFile(const char* flagname, const std::string& value)
     exit(1);
     return false;
 }
-static const bool sequenceFolderValidator = gflags::RegisterFlagValidator(&FLAGS_sequenceFolder, &ValidateFile);
+static const bool sequenceFolderValidator = gflags::RegisterFlagValidator(&FLAGS_sequenceFolder,
+                                            &ValidateFile);
 
 
 double rescale = 1;
@@ -108,7 +109,8 @@ bool disableROS = false;
 int start = 0;
 int end = 100000;
 bool prefetch = false;
-float playbackSpeed = 0; // 0 for linearize (play as fast as possible, while sequentializing tracking & mapping). otherwise, factor on timestamps.
+float playbackSpeed =
+    0; // 0 for linearize (play as fast as possible, while sequentializing tracking & mapping). otherwise, factor on timestamps.
 bool preload = false;
 bool usO = false;
 
@@ -199,6 +201,7 @@ int main( int argc, char** argv )
     settingsDefault(FLAGS_preset);
     ImageFolderReader* reader = new ImageFolderReader(FLAGS_sequenceFolder);
     reader->setGlobalCalibration();
+    //Input* input = new Input();
 
     if(setting_photometricCalibration > 0 && reader->getPhotometricGamma() == 0)
     {
@@ -240,6 +243,14 @@ int main( int argc, char** argv )
     {
         fullSystem->outputWrapper.push_back(new IOWrap::SampleOutputWrapper());
     }
+
+
+    //input->onFrame.connect([ = ](const cv::Mat m)
+    //{
+    //    fullSystem->addActiveFrame(img, i);
+    //
+    //});
+    //input->main_fnc();
 
     // to make MacOS happy: run this in dedicated thread -- and use this one to run the GUI.
     std::thread runthread([&]()
@@ -316,11 +327,13 @@ int main( int argc, char** argv )
             {
                 struct timeval tv_now;
                 gettimeofday(&tv_now, NULL);
-                double sSinceStart = sInitializerOffset + ((tv_now.tv_sec - tv_start.tv_sec) + (tv_now.tv_usec - tv_start.tv_usec) / (1000.0f * 1000.0f));
+                double sSinceStart = sInitializerOffset + ((tv_now.tv_sec - tv_start.tv_sec) +
+                                                           (tv_now.tv_usec - tv_start.tv_usec) / (1000.0f * 1000.0f));
 
                 if(sSinceStart < timesToPlayAt[ii])
                 {
-                    std::this_thread::sleep_for(std::chrono::microseconds((int)((timesToPlayAt[ii] - sSinceStart) * 1000 * 1000)));
+                    std::this_thread::sleep_for(std::chrono::microseconds((int)((timesToPlayAt[ii] - sSinceStart) *
+                                                1000 * 1000)));
                 }
                 else if(sSinceStart > timesToPlayAt[ii] + 0.5 + 0.1 * (ii % 2))
                 {
@@ -380,9 +393,11 @@ int main( int argc, char** argv )
 
 
         int numFramesProcessed = abs(idsToPlay[0] - idsToPlay.back());
-        double numSecondsProcessed = fabs(reader->getTimestamp(idsToPlay[0]) - reader->getTimestamp(idsToPlay.back()));
+        double numSecondsProcessed = fabs(reader->getTimestamp(idsToPlay[0]) - reader->getTimestamp(
+                                              idsToPlay.back()));
         double MilliSecondsTakenSingle = 1000.0f * (ended - started) / (float)(CLOCKS_PER_SEC);
-        double MilliSecondsTakenMT = sInitializerOffset + ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f + (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f);
+        double MilliSecondsTakenMT = sInitializerOffset + ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f +
+                                     (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f);
         LOG_INFO("\n======================"
                  "\n%d Frames (%.1f fps)"
                  "\n%.2fms per frame (single core); "
@@ -402,7 +417,8 @@ int main( int argc, char** argv )
             std::ofstream tmlog;
             tmlog.open("logs/time.txt", std::ios::trunc | std::ios::out);
             tmlog << 1000.0f * (ended - started) / (float)(CLOCKS_PER_SEC * reader->getNumImages()) << " "
-                  << ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f + (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f) / (float)reader->getNumImages() << "\n";
+                  << ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f + (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f) /
+                  (float)reader->getNumImages() << "\n";
             tmlog.flush();
             tmlog.close();
         }

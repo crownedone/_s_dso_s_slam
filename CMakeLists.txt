@@ -41,6 +41,7 @@ set(dso_UTIL
     ${PROJECT_SOURCE_DIR}/src/util/globalCalib.cpp
     ${PROJECT_SOURCE_DIR}/src/util/globalCalib.h
     ${PROJECT_SOURCE_DIR}/src/util/DatasetReader.h
+    ${PROJECT_SOURCE_DIR}/src/util/Input.hpp
     ${PROJECT_SOURCE_DIR}/src/util/FrameShell.h
     ${PROJECT_SOURCE_DIR}/src/util/NumType.h
     ${PROJECT_SOURCE_DIR}/src/util/nanoflann.h
@@ -160,7 +161,7 @@ else()
     set(LIBZIP_LIBRARY "")
 endif()
 
-add_executable(dso ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin.cpp ${dso_SOURCE_FILES} ${dso_pangolin_SOURCE_FILES})
+add_executable(dso ${PROJECT_SOURCE_DIR}/src/main.cpp ${dso_SOURCE_FILES} ${dso_pangolin_SOURCE_FILES})
 add_executable(dsoTests ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${dso_TEST_CASES} ${dso_pangolin_SOURCE_FILES})
 
 target_link_libraries(dso gflags)

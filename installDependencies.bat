@@ -28,7 +28,7 @@ suitesparse:x64-windows ^
 zlib:x64-windows ^
 opengl:x64-windows ^
 catch2:x64-windows ^
-opencv4[contrib,png,tiff,jpeg,opengl,world,cuda]:x64-windows
+opencv4[contrib,png,tiff,jpeg,opengl,world]:x64-windows
 
 ) ELSE (
 echo Please install vcpkg in C:/vcpkg
