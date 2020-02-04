@@ -5,12 +5,12 @@
 #define _TIMES_H
 
 #ifdef _WIN32
-#include <stdint.h>
-#include <sys/timeb.h>
-#include <sys/types.h>
-#include <WinSock2.h>
+    #include <stdint.h>
+    #include <sys/timeb.h>
+    #include <sys/types.h>
+    #include <WinSock2.h>
 #else
-#include <chrono>
+    #include <chrono>
 #endif
 
 
@@ -53,27 +53,27 @@ typedef long long suseconds_t ;
 class StopWatch
 {
 private:
-	// MSVC does not have a high_resolution_clock in chrono until VS2015
+    // MSVC does not have a high_resolution_clock in chrono until VS2015
 #if defined(WIN32)
-	/// First time point.
-	int64_t mStart;
+    /// First time point.
+    int64_t mStart;
 #else
-	/// First time point.
-	std::chrono::high_resolution_clock::time_point mStart;
+    /// First time point.
+    std::chrono::high_resolution_clock::time_point mStart;
 #endif
 
 public:
-	/// Start is automatically called.
-	StopWatch();
+    /// Start is automatically called.
+    StopWatch();
 
-	/// Start stop watch.
-	void start();
+    /// Start stop watch.
+    void start();
 
-	/// Stop and return time in milliseconds.
-	double stop();
+    /// Stop and return time in milliseconds.
+    double stop();
 
-	/// Restarts timer and returns time until now.
-	double restart();
+    /// Restarts timer and returns time until now.
+    double restart();
 };
 
 #endif

@@ -41,8 +41,7 @@ cd Pangolin
 mkdir build
 cd build
 
-Echo Please copy CMakeLists from tools folder to thirdparty/Pangolin.
 Echo Please copy make.bat from tools folder to thirdparty/Pangolin/build and run.
-Echo Make sure you build both Debug and Release targets for pangolin.
+Echo Make sure you build Debug Release and RelWithDebInfo targets for pangolin (the library).
 
 pause

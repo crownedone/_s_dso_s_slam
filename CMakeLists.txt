@@ -1,28 +1,17 @@
-SET(PROJECT_NAME DSO)
+cmake_minimum_required(VERSION 3.12)
+project(DSO_SLAM)
 
-PROJECT(${PROJECT_NAME})
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-    
-# set boost dynamic multi-thread libraries
-set (Boost_USE_MULTITHREADED ON)
+# later be merged into one ... or not
+set(DSO DSO_LIB)
+set(ORB_SLAM ORB_SLAM_LIB)
 
-# required libraries
-find_package(suitesparse CONFIG REQUIRED)
-find_package(Eigen3 CONFIG REQUIRED)
-find_package(Boost 1.71.0 REQUIRED COMPONENTS system thread filesystem) 
-find_package(sophus CONFIG REQUIRED)
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE Release)
+ENDIF()
+MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
-# Required dependencies
-find_package(OpenCV CONFIG REQUIRED)
-find_package(gflags CONFIG REQUIRED)
-find_package(glog CONFIG REQUIRED)
-
-# Optional dependencies
-find_package(Pangolin CONFIG QUIET)
-find_package(libzip CONFIG QUIET) # has no cmake windows support and can be found with pkg-config if needed.
-
-# Testing
-find_package(Catch2 CONFIG REQUIRED)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # flags
 add_definitions("-D__SSE3__")
@@ -30,8 +19,53 @@ add_definitions("-DNOMINMAX")
 add_definitions("-D_USE_MATH_DEFINES")
 
 if (MSVC)
-     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /bigobj")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /bigobj")
 endif (MSVC)
+
+# set boost dynamic multi-thread libraries
+set (Boost_USE_MULTITHREADED ON)
+
+# Required dependencies
+find_package(gflags CONFIG REQUIRED)
+find_package(glog CONFIG REQUIRED)
+
+find_package(OpenCV CONFIG REQUIRED)
+find_package(suitesparse CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system thread filesystem) 
+
+find_package(sophus CONFIG REQUIRED)
+# Not set correctly
+set(SOPHUS_SOURCE_DIR ${_VCPKG_INSTALLED_DIR}/x64-windows/include/)
+
+# Testing
+find_package(Catch2 CONFIG REQUIRED)
+
+# Optional dependencies
+find_package(Pangolin QUIET)
+
+
+if (Pangolin_FOUND)
+    include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/Pangolin/include)
+    include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/Pangolin/build/src/include)
+    include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/Pangolin/build/external/glew/include)
+    set(dso_pangolin_SOURCE_FILES 
+      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.cpp
+      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.h
+      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.cpp
+      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.h)
+    source_group("Pangolin" FILES ${dso_pangolin_SOURCE_FILES})
+    set(HAS_PANGOLIN 1)
+else ()
+    message("--- could not find PANGOLIN, not compiling dso_pangolin library.")
+    message("    this means there will be no 3D display / GUI available.")
+    set(dso_pangolin_SOURCE_FILES )
+    set(HAS_PANGOLIN 0)
+endif ()
+
+# library setup
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 set(dso_UTIL
     ${PROJECT_SOURCE_DIR}/src/util/settings.cpp
@@ -117,112 +151,83 @@ set(dso_TESTS
 )
 source_group("tests" FILES ${dso_TESTS})
 
-set(dso_TEST_CASES
-  ${dso_SOURCE_FILES}
-  ${dso_TESTS}
-)
 
-set(SOPHUS_SOURCE_DIR ${_VCPKG_INSTALLED_DIR}/x64-windows/include/)
+
 include_directories(
+  ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/src
   ${SOPHUS_SOURCE_DIR}
   ${EIGEN3_INCLUDE_DIR}
+  ${Pangolin_INCLUDE_DIRS}
 ) 
 
+# DSO Library (will be shared when we got rid of all the static settings)
+add_library(${DSO} ${dso_SOURCE_FILES} ${dso_pangolin_SOURCE_FILES})
+target_link_libraries(${DSO}
+glog::glog
+${OpenCV_LIBS}
+${EIGEN3_LIBS}
+${Pangolin_LIBRARIES}
+Boost::system Boost::thread Boost::filesystem
+SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl
+)
+
+# Main Executable
+add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp)
+target_link_libraries(exe_DSO_SLAM ${DSO} gflags)
+add_dependencies(exe_DSO_SLAM ${DSO})
+
+# Tests
+add_executable(unit_DSO_SLAM ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${dso_TESTS})
+target_link_libraries(unit_DSO_SLAM ${PROJECT_NAME} gflags)
+add_dependencies(unit_DSO_SLAM ${PROJECT_NAME})
 
 
-# decide if we have pangolin
-if (Pangolin_FOUND)
-    include_directories(${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/include)
-    include_directories(${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/include)
-    include_directories(${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/external/glew/include)
-    set(dso_pangolin_SOURCE_FILES 
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.cpp
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.h
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.cpp
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.h)
-    source_group("Pangolin" FILES ${dso_pangolin_SOURCE_FILES})
-    set(HAS_PANGOLIN 1)
-else ()
-    message("--- could not find PANGOLIN, not compiling dso_pangolin library.")
-    message("    this means there will be no 3D display / GUI available for dso_dataset.")
-    set(dso_pangolin_SOURCE_FILES )
-    set(HAS_PANGOLIN 0)
-endif ()
-
-
-# decide if we have ziplib.
-if (LibZip_FOUND)
-    message("--- found ziplib (${LIBZIP_VERSION}), compiling with zip capability.")
-    add_definitions(-DHAS_ZIPLIB=1)
-    include_directories( ${LIBZIP_INCLUDE_DIR_ZIP} ${LIBZIP_INCLUDE_DIR_ZIPCONF} ) 
-else()
-    message("--- not found ziplib (${LIBZIP_LIBRARY}), compiling without zip capability.")
-    set(LIBZIP_LIBRARY "")
-endif()
-
-add_executable(dso ${PROJECT_SOURCE_DIR}/src/main.cpp ${dso_SOURCE_FILES} ${dso_pangolin_SOURCE_FILES})
-add_executable(dsoTests ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${dso_TEST_CASES} ${dso_pangolin_SOURCE_FILES})
-
-target_link_libraries(dso gflags)
-target_link_libraries(dso glog::glog)
-target_link_libraries(dso opencv_world opencv_img_hash ${__cvcomponent})
-target_link_libraries(dso Boost::system Boost::thread Boost::filesystem)
-target_link_libraries(dso SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl)
-
-target_link_libraries(dsoTests gflags)
-target_link_libraries(dsoTests glog::glog)
-target_link_libraries(dsoTests opencv_world opencv_img_hash ${__cvcomponent})
-target_link_libraries(dsoTests Boost::system Boost::thread Boost::filesystem)
-target_link_libraries(dsoTests SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl)
-target_link_libraries(dsoTests Catch2::Catch2)
-
-if (Pangolin_FOUND)
-target_link_libraries(dso pangolin)
-target_include_directories(dso PRIVATE ${Pangolin_INCLUDE_DIRS})
+#### APPENDIX #### Copy missing dll files (Only Windows)
+if(WIN32)
 # copy pangolin dlls
-add_custom_command(TARGET dso POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_directory
+add_custom_command(TARGET exe_DSO_SLAM POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/$<CONFIGURATION>"
-    $<TARGET_FILE_DIR:dso>)
-# copy zstd.dll
-add_custom_command(TARGET dso POST_BUILD 
-COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-    "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/Release/zstd.dll"
-    $<TARGET_FILE_DIR:dso>)
-
-
-target_link_libraries(dsoTests pangolin)
-target_include_directories(dsoTests PRIVATE ${Pangolin_INCLUDE_DIRS})
-# copy pangolin dlls
-add_custom_command(TARGET dsoTests POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/$<CONFIGURATION>"
-    $<TARGET_FILE_DIR:dsoTests>)
-# copy zstd.dll
-add_custom_command(TARGET dsoTests POST_BUILD 
-COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-    "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/Release/zstd.dll"
-    $<TARGET_FILE_DIR:dso>)
-endif()
-
-
+    $<TARGET_FILE_DIR:exe_DSO_SLAM>)
 # copy missing hdf5 and zlib1.dll
-add_custom_command(TARGET dso POST_BUILD 
-COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+add_custom_command(TARGET exe_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/hdf5.dll
-    $<TARGET_FILE_DIR:dso>)
-add_custom_command(TARGET dso POST_BUILD 
-COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    $<TARGET_FILE_DIR:exe_DSO_SLAM>)
+add_custom_command(TARGET exe_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zstd.dll
+    $<TARGET_FILE_DIR:exe_DSO_SLAM>)
+add_custom_command(TARGET exe_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
-    $<TARGET_FILE_DIR:dso>)
+    $<TARGET_FILE_DIR:exe_DSO_SLAM>)
+add_custom_command(TARGET exe_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/gflags.dll
+    $<TARGET_FILE_DIR:exe_DSO_SLAM>/gflags_debug.dll)
 
-    # copy missing hdf5 and zlib1.dll
-add_custom_command(TARGET dsoTests POST_BUILD 
-COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    # copy pangolin dlls
+add_custom_command(TARGET unit_DSO_SLAM POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin/build/src/$<CONFIGURATION>"
+    $<TARGET_FILE_DIR:unit_DSO_SLAM>)
+# copy missing hdf5 and zlib1.dll
+add_custom_command(TARGET unit_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/hdf5.dll
-    $<TARGET_FILE_DIR:dsoTests>)
-add_custom_command(TARGET dsoTests POST_BUILD 
-COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    $<TARGET_FILE_DIR:unit_DSO_SLAM>)
+add_custom_command(TARGET unit_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zstd.dll
+    $<TARGET_FILE_DIR:unit_DSO_SLAM>)
+add_custom_command(TARGET unit_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
-    $<TARGET_FILE_DIR:dsoTests>)
+    $<TARGET_FILE_DIR:unit_DSO_SLAM>)
+add_custom_command(TARGET unit_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/gflags.dll
+    $<TARGET_FILE_DIR:unit_DSO_SLAM>/gflags_debug.dll)
+endif()
