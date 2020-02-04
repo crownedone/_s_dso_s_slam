@@ -22,14 +22,14 @@
 */
 
 
-#include "OptimizationBackend/EnergyFunctionalStructs.h"
-#include "OptimizationBackend/EnergyFunctional.h"
-#include "FullSystem/FullSystem.h"
-#include "FullSystem/HessianBlocks.h"
-#include "FullSystem/Residuals.h"
+#include "OptimizationBackend/EnergyFunctionalStructs.hpp"
+#include "OptimizationBackend/EnergyFunctional.hpp"
+#include "DSO_system/FullSystem.hpp"
+#include "DSO_system/HessianBlocks.hpp"
+#include "DSO_system/Residuals.hpp"
 
 #if !defined(__SSE3__) && !defined(__SSE2__) && !defined(__SSE1__)
-    #include "SSE2NEON.h"
+    #include "SSE2NEON.hpp"
 #endif
 
 namespace dso

@@ -23,7 +23,7 @@
 
 
 
-#include "util/settings.h"
+#include "util/settings.hpp"
 #include <boost/bind.hpp>
 
 

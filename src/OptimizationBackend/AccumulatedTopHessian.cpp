@@ -22,13 +22,13 @@
 */
 
 
-#include "OptimizationBackend/AccumulatedTopHessian.h"
-#include "OptimizationBackend/EnergyFunctional.h"
-#include "OptimizationBackend/EnergyFunctionalStructs.h"
+#include "OptimizationBackend/AccumulatedTopHessian.hpp"
+#include "OptimizationBackend/EnergyFunctional.hpp"
+#include "OptimizationBackend/EnergyFunctionalStructs.hpp"
 #include <iostream>
 
 #if !defined(__SSE3__) && !defined(__SSE2__) && !defined(__SSE1__)
-    #include "SSE2NEON.h"
+    #include "SSE2NEON.hpp"
 #endif
 
 namespace dso
@@ -37,7 +37,8 @@ namespace dso
 
 
 template<int mode>
-void AccumulatedTopHessianSSE::addPoint(EFPoint* p, EnergyFunctional const* const ef, int tid)  // 0 = active, 1 = linearized, 2=marginalize
+void AccumulatedTopHessianSSE::addPoint(EFPoint* p, EnergyFunctional const* const ef,
+                                        int tid)  // 0 = active, 1 = linearized, 2=marginalize
 {
 
 
@@ -100,8 +101,10 @@ void AccumulatedTopHessianSSE::addPoint(EFPoint* p, EnergyFunctional const* cons
         if(mode == 1)
         {
             // compute Jp*delta
-            __m128 Jp_delta_x = _mm_set1_ps(rJ->Jpdxi[0].dot(dp.head<6>()) + rJ->Jpdc[0].dot(dc) + rJ->Jpdd[0] * dd);
-            __m128 Jp_delta_y = _mm_set1_ps(rJ->Jpdxi[1].dot(dp.head<6>()) + rJ->Jpdc[1].dot(dc) + rJ->Jpdd[1] * dd);
+            __m128 Jp_delta_x = _mm_set1_ps(rJ->Jpdxi[0].dot(dp.head<6>()) + rJ->Jpdc[0].dot(
+                                                dc) + rJ->Jpdd[0] * dd);
+            __m128 Jp_delta_y = _mm_set1_ps(rJ->Jpdxi[1].dot(dp.head<6>()) + rJ->Jpdc[1].dot(
+                                                dc) + rJ->Jpdd[1] * dd);
             __m128 delta_a = _mm_set1_ps((float)(dp[6]));
             __m128 delta_b = _mm_set1_ps((float)(dp[7]));
 
@@ -179,9 +182,12 @@ void AccumulatedTopHessianSSE::addPoint(EFPoint* p, EnergyFunctional const* cons
     }
 
 }
-template void AccumulatedTopHessianSSE::addPoint<0>(EFPoint* p, EnergyFunctional const* const ef, int tid);
-template void AccumulatedTopHessianSSE::addPoint<1>(EFPoint* p, EnergyFunctional const* const ef, int tid);
-template void AccumulatedTopHessianSSE::addPoint<2>(EFPoint* p, EnergyFunctional const* const ef, int tid);
+template void AccumulatedTopHessianSSE::addPoint<0>(EFPoint* p, EnergyFunctional const* const ef,
+        int tid);
+template void AccumulatedTopHessianSSE::addPoint<1>(EFPoint* p, EnergyFunctional const* const ef,
+        int tid);
+template void AccumulatedTopHessianSSE::addPoint<2>(EFPoint* p, EnergyFunctional const* const ef,
+        int tid);
 
 
 
@@ -190,7 +196,8 @@ template void AccumulatedTopHessianSSE::addPoint<2>(EFPoint* p, EnergyFunctional
 
 
 
-void AccumulatedTopHessianSSE::stitchDouble(MatXX& H, VecX& b, EnergyFunctional const* const EF, bool usePrior, bool useDelta, int tid)
+void AccumulatedTopHessianSSE::stitchDouble(MatXX& H, VecX& b, EnergyFunctional const* const EF,
+                                            bool usePrior, bool useDelta, int tid)
 {
     H = MatXX::Zero(nframes[tid] * 8 + CPARS, nframes[tid] * 8 + CPARS);
     b = VecX::Zero(nframes[tid] * 8 + CPARS);
@@ -215,11 +222,14 @@ void AccumulatedTopHessianSSE::stitchDouble(MatXX& H, VecX& b, EnergyFunctional 
             MatPCPC accH = acc[tid][aidx].H.cast<double>();
 
 
-            H.block<8, 8>(hIdx, hIdx).noalias() += EF->adHost[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adHost[aidx].transpose();
+            H.block<8, 8>(hIdx, hIdx).noalias() += EF->adHost[aidx] * accH.block<8, 8>(CPARS,
+                                                   CPARS) * EF->adHost[aidx].transpose();
 
-            H.block<8, 8>(tIdx, tIdx).noalias() += EF->adTarget[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
+            H.block<8, 8>(tIdx, tIdx).noalias() += EF->adTarget[aidx] * accH.block<8, 8>(CPARS,
+                                                   CPARS) * EF->adTarget[aidx].transpose();
 
-            H.block<8, 8>(hIdx, tIdx).noalias() += EF->adHost[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
+            H.block<8, 8>(hIdx, tIdx).noalias() += EF->adHost[aidx] * accH.block<8, 8>(CPARS,
+                                                   CPARS) * EF->adTarget[aidx].transpose();
 
             H.block<8, CPARS>(hIdx, 0).noalias() += EF->adHost[aidx] * accH.block<8, CPARS>(CPARS, 0);
 
@@ -308,11 +318,14 @@ void AccumulatedTopHessianSSE::stitchDoubleInternal(
             accH += acc[tid2][aidx].H.cast<double>();
         }
 
-        H[tid].block<8, 8>(hIdx, hIdx).noalias() += EF->adHost[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adHost[aidx].transpose();
+        H[tid].block<8, 8>(hIdx, hIdx).noalias() += EF->adHost[aidx] * accH.block<8, 8>(CPARS,
+                                                    CPARS) * EF->adHost[aidx].transpose();
 
-        H[tid].block<8, 8>(tIdx, tIdx).noalias() += EF->adTarget[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
+        H[tid].block<8, 8>(tIdx, tIdx).noalias() += EF->adTarget[aidx] * accH.block<8, 8>(CPARS,
+                                                    CPARS) * EF->adTarget[aidx].transpose();
 
-        H[tid].block<8, 8>(hIdx, tIdx).noalias() += EF->adHost[aidx] * accH.block<8, 8>(CPARS, CPARS) * EF->adTarget[aidx].transpose();
+        H[tid].block<8, 8>(hIdx, tIdx).noalias() += EF->adHost[aidx] * accH.block<8, 8>(CPARS,
+                                                    CPARS) * EF->adTarget[aidx].transpose();
 
         H[tid].block<8, CPARS>(hIdx, 0).noalias() += EF->adHost[aidx] * accH.block<8, CPARS>(CPARS, 0);
 

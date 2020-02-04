@@ -23,8 +23,7 @@
 
 
 
-#include "util/globalCalib.h"
-#include "stdio.h"
+#include "util/globalCalib.hpp"
 #include <iostream>
 #include <Eigen/LU>
 namespace dso

@@ -30,28 +30,28 @@
 #include <stdio.h>
 
 #include <gflags/gflags.h>
-#include <sys/Logging.hpp>
+#include <Logging.hpp>
 
-#include "IOWrapper/Output3DWrapper.h"
-#include "IOWrapper/ImageDisplay.h"
+#include "IOWrapper/Output3DWrapper.hpp"
+#include "IOWrapper/ImageDisplay.hpp"
 
 
 #include <boost/thread.hpp>
-#include "util/settings.h"
-#include "util/globalFuncs.h"
+#include "util/settings.hpp"
+#include "util/globalFuncs.hpp"
 
-#include "util/globalCalib.h"
+#include "util/globalCalib.hpp"
 
-#include "util/NumType.h"
-#include "FullSystem/FullSystem.h"
-#include "OptimizationBackend/MatrixAccumulators.h"
-#include "FullSystem/PixelSelector.h"
+#include "util/NumType.hpp"
+#include "DSO_system/FullSystem.hpp"
+#include "OptimizationBackend/MatrixAccumulators.hpp"
+#include "DSO_system/PixelSelector.hpp"
 
 // Read input
-#include "util/DatasetReader.h"
+#include "util/DatasetReader.hpp"
 
-#include "IOWrapper/Pangolin/PangolinDSOViewer.h"
-#include "IOWrapper/OutputWrapper/SampleOutputWrapper.h"
+#include "IOWrapper/Pangolin/PangolinDSOViewer.hpp"
+#include "IOWrapper/OutputWrapper/SampleOutputWrapper.hpp"
 
 // Path to the sequence folder.
 DEFINE_string(sequenceFolder, "", "path to your sequence Folder");
@@ -288,9 +288,7 @@ int main( int argc, char** argv )
             }
         }
 
-        struct timeval tv_start;
-
-        gettimeofday(&tv_start, NULL);
+        StopWatch tv_start;
 
         clock_t started = clock();
 
@@ -302,7 +300,7 @@ int main( int argc, char** argv )
         {
             if(!fullSystem->initialized)    // if not initialized: reset start time.
             {
-                gettimeofday(&tv_start, NULL);
+                tv_start.restart();
                 started = clock();
                 sInitializerOffset = timesToPlayAt[ii];
             }
@@ -325,10 +323,7 @@ int main( int argc, char** argv )
 
             if(playbackSpeed != 0)
             {
-                struct timeval tv_now;
-                gettimeofday(&tv_now, NULL);
-                double sSinceStart = sInitializerOffset + ((tv_now.tv_sec - tv_start.tv_sec) +
-                                                           (tv_now.tv_usec - tv_start.tv_usec) / (1000.0f * 1000.0f));
+                double sSinceStart = tv_start.stop() / 1000;
 
                 if(sSinceStart < timesToPlayAt[ii])
                 {
@@ -385,8 +380,6 @@ int main( int argc, char** argv )
 
         fullSystem->blockUntilMappingIsFinished();
         clock_t ended = clock();
-        struct timeval tv_end;
-        gettimeofday(&tv_end, NULL);
 
 
         fullSystem->printResult("result.txt");
@@ -396,8 +389,8 @@ int main( int argc, char** argv )
         double numSecondsProcessed = fabs(reader->getTimestamp(idsToPlay[0]) - reader->getTimestamp(
                                               idsToPlay.back()));
         double MilliSecondsTakenSingle = 1000.0f * (ended - started) / (float)(CLOCKS_PER_SEC);
-        double MilliSecondsTakenMT = sInitializerOffset + ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f +
-                                     (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f);
+        double MilliSecondsTakenMT = tv_start.stop();
+
         LOG_INFO("\n======================"
                  "\n%d Frames (%.1f fps)"
                  "\n%.2fms per frame (single core); "
@@ -417,7 +410,7 @@ int main( int argc, char** argv )
             std::ofstream tmlog;
             tmlog.open("logs/time.txt", std::ios::trunc | std::ios::out);
             tmlog << 1000.0f * (ended - started) / (float)(CLOCKS_PER_SEC * reader->getNumImages()) << " "
-                  << ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f + (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f) /
+                  << MilliSecondsTakenMT /
                   (float)reader->getNumImages() << "\n";
             tmlog.flush();
             tmlog.close();

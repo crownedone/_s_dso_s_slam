@@ -23,7 +23,7 @@
 
 
 
-#include "IOWrapper/ImageDisplay.h"
+#include "IOWrapper/ImageDisplay.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
 
@@ -32,7 +32,7 @@
 
 #include <boost/thread.hpp>
 
-#include "util/settings.h"
+#include "util/settings.hpp"
 
 namespace dso
 {
@@ -155,7 +155,8 @@ void displayImage(const char* windowName, const MinimalImageB16* img, bool autoS
 }
 
 
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageB*> images, int cc, int rc)
+void displayImageStitch(const char* windowName, const std::vector<MinimalImageB*> images, int cc,
+                        int rc)
 {
     std::vector<cv::Mat> imagesCV;
 
@@ -166,7 +167,8 @@ void displayImageStitch(const char* windowName, const std::vector<MinimalImageB*
 
     displayImageStitch(windowName, imagesCV, cc, rc);
 }
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageB3*> images, int cc, int rc)
+void displayImageStitch(const char* windowName, const std::vector<MinimalImageB3*> images, int cc,
+                        int rc)
 {
     std::vector<cv::Mat> imagesCV;
 
@@ -177,7 +179,8 @@ void displayImageStitch(const char* windowName, const std::vector<MinimalImageB3
 
     displayImageStitch(windowName, imagesCV, cc, rc);
 }
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageF*> images, int cc, int rc)
+void displayImageStitch(const char* windowName, const std::vector<MinimalImageF*> images, int cc,
+                        int rc)
 {
     std::vector<cv::Mat> imagesCV;
 
@@ -188,7 +191,8 @@ void displayImageStitch(const char* windowName, const std::vector<MinimalImageF*
 
     displayImageStitch(windowName, imagesCV, cc, rc);
 }
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageF3*> images, int cc, int rc)
+void displayImageStitch(const char* windowName, const std::vector<MinimalImageF3*> images, int cc,
+                        int rc)
 {
     std::vector<cv::Mat> imagesCV;
 

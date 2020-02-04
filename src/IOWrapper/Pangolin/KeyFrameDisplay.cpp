@@ -24,17 +24,17 @@
 
 
 #include <stdio.h>
-#include "util/settings.h"
+#include "util/settings.hpp"
 
 //#include <GL/glx.h>
 //#include <GL/gl.h>
 //#include <GL/glu.h>
 
 #include <pangolin/pangolin.h>
-#include "KeyFrameDisplay.h"
-#include "FullSystem/HessianBlocks.h"
-#include "FullSystem/ImmaturePoint.h"
-#include "util/FrameShell.h"
+#include "KeyFrameDisplay.hpp"
+#include "DSO_system/HessianBlocks.hpp"
+#include "DSO_system/ImmaturePoint.hpp"
+#include "util/FrameShell.hpp"
 
 
 
@@ -190,7 +190,8 @@ KeyFrameDisplay::~KeyFrameDisplay()
     }
 }
 
-bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, int mode, float minBS, int sparsity)
+bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, int mode, float minBS,
+                                int sparsity)
 {
     if(canRefresh)
     {
@@ -291,7 +292,8 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
 
             tmpVertexBuffer[vertexBufferNumPoints][0] = ((originalInputSparse[i].u + dx) * fxi + cxi) * depth;
             tmpVertexBuffer[vertexBufferNumPoints][1] = ((originalInputSparse[i].v + dy) * fyi + cyi) * depth;
-            tmpVertexBuffer[vertexBufferNumPoints][2] = depth * (1 + 2 * fxi * (rand() / (float)RAND_MAX - 0.5f));
+            tmpVertexBuffer[vertexBufferNumPoints][2] = depth * (1 + 2 * fxi * (rand() /
+                                                        (float)RAND_MAX - 0.5f));
 
 
 
@@ -355,8 +357,10 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
     if(numGLBufferGoodPoints > numGLBufferPoints)
     {
         numGLBufferPoints = vertexBufferNumPoints * 1.3;
-        vertexBuffer.Reinitialise(pangolin::GlArrayBuffer, numGLBufferPoints, GL_FLOAT, 3, GL_DYNAMIC_DRAW );
-        colorBuffer.Reinitialise(pangolin::GlArrayBuffer, numGLBufferPoints, GL_UNSIGNED_BYTE, 3, GL_DYNAMIC_DRAW );
+        vertexBuffer.Reinitialise(pangolin::GlArrayBuffer, numGLBufferPoints, GL_FLOAT, 3,
+                                  GL_DYNAMIC_DRAW );
+        colorBuffer.Reinitialise(pangolin::GlArrayBuffer, numGLBufferPoints, GL_UNSIGNED_BYTE, 3,
+                                 GL_DYNAMIC_DRAW );
     }
 
     vertexBuffer.Upload(tmpVertexBuffer, sizeof(float) * 3 * numGLBufferGoodPoints, 0);

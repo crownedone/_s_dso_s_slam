@@ -22,18 +22,18 @@
 */
 
 
-#include "OptimizationBackend/EnergyFunctional.h"
-#include "OptimizationBackend/EnergyFunctionalStructs.h"
-#include "FullSystem/FullSystem.h"
-#include "FullSystem/HessianBlocks.h"
-#include "FullSystem/Residuals.h"
-#include "OptimizationBackend/AccumulatedSCHessian.h"
-#include "OptimizationBackend/AccumulatedTopHessian.h"
+#include "OptimizationBackend/EnergyFunctional.hpp"
+#include "OptimizationBackend/EnergyFunctionalStructs.hpp"
+#include "DSO_system/FullSystem.hpp"
+#include "DSO_system/HessianBlocks.hpp"
+#include "DSO_system/Residuals.hpp"
+#include "OptimizationBackend/AccumulatedSCHessian.hpp"
+#include "OptimizationBackend/AccumulatedTopHessian.hpp"
 #include <Eigen/LU>
 #include <Eigen/SVD>
 
 #if !defined(__SSE3__) && !defined(__SSE2__) && !defined(__SSE1__)
-    #include "SSE2NEON.h"
+    #include "SSE2NEON.hpp"
 #endif
 
 namespace dso
@@ -76,7 +76,8 @@ void EnergyFunctional::setAdjointsF(CalibHessian* Hcalib)
             AT.topLeftCorner<6, 6>() = Mat66::Identity();
 
 
-            Vec2f affLL = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l_0(), target->aff_g2l_0()).cast<float>();
+            Vec2f affLL = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l_0(),
+                                                      target->aff_g2l_0()).cast<float>();
             AT(6, 6) = -affLL[0];
             AH(6, 6) = affLL[0];
             AT(7, 7) = -1;
@@ -220,7 +221,8 @@ void EnergyFunctional::setDeltaF(CalibHessian* HCalib)
         for(int t = 0; t < nFrames; t++)
         {
             int idx = h + t * nFrames;
-            adHTdeltaF[idx] = frames[h]->data->get_state_minus_stateZero().head<8>().cast<float>().transpose() * adHostF[idx]
+            adHTdeltaF[idx] = frames[h]->data->get_state_minus_stateZero().head<8>().cast<float>().transpose() *
+                              adHostF[idx]
                               + frames[t]->data->get_state_minus_stateZero().head<8>().cast<float>().transpose() * adTargetF[idx];
         }
 
@@ -245,7 +247,8 @@ void EnergyFunctional::accumulateAF_MT(MatXX& H, VecX& b, bool MT)
 {
     if(MT)
     {
-        red->reduce(boost::bind(&AccumulatedTopHessianSSE::setZero, accSSE_top_A, nFrames,  _1, _2, _3, _4), 0, 0, 0);
+        red->reduce(boost::bind(&AccumulatedTopHessianSSE::setZero, accSSE_top_A, nFrames,  _1, _2, _3, _4),
+                    0, 0, 0);
         red->reduce(boost::bind(&AccumulatedTopHessianSSE::addPointsInternal<0>,
                                 accSSE_top_A, &allPoints, this,  _1, _2, _3, _4), 0, allPoints.size(), 50);
         accSSE_top_A->stitchDoubleMT(red, H, b, this, false, true);
@@ -271,7 +274,8 @@ void EnergyFunctional::accumulateLF_MT(MatXX& H, VecX& b, bool MT)
 {
     if(MT)
     {
-        red->reduce(boost::bind(&AccumulatedTopHessianSSE::setZero, accSSE_top_L, nFrames,  _1, _2, _3, _4), 0, 0, 0);
+        red->reduce(boost::bind(&AccumulatedTopHessianSSE::setZero, accSSE_top_L, nFrames,  _1, _2, _3, _4),
+                    0, 0, 0);
         red->reduce(boost::bind(&AccumulatedTopHessianSSE::addPointsInternal<1>,
                                 accSSE_top_L, &allPoints, this,  _1, _2, _3, _4), 0, allPoints.size(), 50);
         accSSE_top_L->stitchDoubleMT(red, H, b, this, true, true);
@@ -300,7 +304,8 @@ void EnergyFunctional::accumulateSCF_MT(MatXX& H, VecX& b, bool MT)
 {
     if(MT)
     {
-        red->reduce(boost::bind(&AccumulatedSCHessianSSE::setZero, accSSE_bot, nFrames,  _1, _2, _3, _4), 0, 0, 0);
+        red->reduce(boost::bind(&AccumulatedSCHessianSSE::setZero, accSSE_bot, nFrames,  _1, _2, _3, _4), 0,
+                    0, 0);
         red->reduce(boost::bind(&AccumulatedSCHessianSSE::addPointsInternal,
                                 accSSE_bot, &allPoints, true,  _1, _2, _3, _4), 0, allPoints.size(), 50);
         accSSE_bot->stitchDoubleMT(red, H, b, this, true);
@@ -335,7 +340,8 @@ void EnergyFunctional::resubstituteF_MT(VecX x, CalibHessian* HCalib, bool MT)
         h->data->step.tail<2>().setZero();
 
         for(EFFrame* t : frames)
-            xAd[nFrames * h->idx + t->idx] = xF.segment<8>(CPARS + 8 * h->idx).transpose() *   adHostF[h->idx + nFrames * t->idx]
+            xAd[nFrames * h->idx + t->idx] = xF.segment<8>(CPARS + 8 * h->idx).transpose() *   adHostF[h->idx +
+                                             nFrames * t->idx]
                                              + xF.segment<8>(CPARS + 8 * t->idx).transpose() * adTargetF[h->idx + nFrames * t->idx];
     }
 
@@ -533,11 +539,13 @@ EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)
 
     for(EFFrame* fh2 : frames)
     {
-        connectivityMap[(((uint64_t)eff->frameID) << 32) + ((uint64_t)fh2->frameID)] = Eigen::Vector2i(0, 0);
+        connectivityMap[(((uint64_t)eff->frameID) << 32) + ((uint64_t)fh2->frameID)] = Eigen::Vector2i(0,
+                0);
 
         if(fh2 != eff)
         {
-            connectivityMap[(((uint64_t)fh2->frameID) << 32) + ((uint64_t)eff->frameID)] = Eigen::Vector2i(0, 0);
+            connectivityMap[(((uint64_t)fh2->frameID) << 32) + ((uint64_t)eff->frameID)] = Eigen::Vector2i(0,
+                    0);
         }
     }
 
@@ -1063,14 +1071,17 @@ void EnergyFunctional::solveSystemF(int iteration, double lambda, CalibHessian* 
     }
     else
     {
-        VecX SVecI = (HFinal_top.diagonal() + VecX::Constant(HFinal_top.cols(), 10)).cwiseSqrt().cwiseInverse();
+        VecX SVecI = (HFinal_top.diagonal() + VecX::Constant(HFinal_top.cols(),
+                      10)).cwiseSqrt().cwiseInverse();
         MatXX HFinalScaled = SVecI.asDiagonal() * HFinal_top * SVecI.asDiagonal();
-        x = SVecI.asDiagonal() * HFinalScaled.ldlt().solve(SVecI.asDiagonal() * bFinal_top);//  SVec.asDiagonal() * svd.matrixV() * Ub;
+        x = SVecI.asDiagonal() * HFinalScaled.ldlt().solve(SVecI.asDiagonal() *
+                bFinal_top);//  SVec.asDiagonal() * svd.matrixV() * Ub;
     }
 
 
 
-    if((setting_solverMode & SOLVER_ORTHOGONALIZE_X) || (iteration >= 2 && (setting_solverMode & SOLVER_ORTHOGONALIZE_X_LATER)))
+    if((setting_solverMode & SOLVER_ORTHOGONALIZE_X) || (iteration >= 2 &&
+            (setting_solverMode & SOLVER_ORTHOGONALIZE_X_LATER)))
     {
         VecX xOld = x;
         orthogonalize(&x, 0);

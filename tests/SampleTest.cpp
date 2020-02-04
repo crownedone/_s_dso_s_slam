@@ -1,6 +1,6 @@
 #include "catch.hpp"
 
-#include "../src/FullSystem/FullSystem.h"
+#include "../src/DSO_system/FullSystem.hpp"
 
 TEST_CASE("Sample Test case", "[Sample][Flag]")
 {

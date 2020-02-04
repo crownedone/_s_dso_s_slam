@@ -23,9 +23,9 @@
 
 
 
-#include "IOWrapper/ImageRW.h"
+#include "IOWrapper/ImageRW.hpp"
 #include <opencv2/highgui/highgui.hpp>
-#include <sys/Logging.hpp>
+#include <Logging.hpp>
 
 namespace dso
 {
@@ -49,7 +49,7 @@ MinimalImageB* readImageBW_8U(std::string filename)
     }
 
     MinimalImageB* img = new MinimalImageB(m.cols, m.rows);
-	m.copyTo(img->data);
+    m.copyTo(img->data);
     return img;
 }
 
@@ -70,8 +70,8 @@ MinimalImageB3* readImageRGB_8U(std::string filename)
     }
 
     MinimalImageB3* img = new MinimalImageB3(m.cols, m.rows);
-	m.copyTo(img->data); 
-	return img;
+    m.copyTo(img->data);
+    return img;
 }
 
 MinimalImage<unsigned short>* readImageBW_16U(std::string filename)
@@ -91,7 +91,7 @@ MinimalImage<unsigned short>* readImageBW_16U(std::string filename)
     }
 
     MinimalImage<unsigned short>* img = new MinimalImage<unsigned short>(m.cols, m.rows);
-	m.copyTo(img->data);
+    m.copyTo(img->data);
     return img;
 }
 
@@ -112,7 +112,7 @@ MinimalImageB* readStreamBW_8U(char* data, int numBytes)
     }
 
     MinimalImageB* img = new MinimalImageB(m.cols, m.rows);
-	m.copyTo(img->data);
+    m.copyTo(img->data);
     return img;
 }
 

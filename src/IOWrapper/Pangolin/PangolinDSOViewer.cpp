@@ -21,14 +21,14 @@
     along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "PangolinDSOViewer.h"
-#include "KeyFrameDisplay.h"
+#include "PangolinDSOViewer.hpp"
+#include "KeyFrameDisplay.hpp"
 
-#include "util/settings.h"
-#include "util/globalCalib.h"
-#include "FullSystem/HessianBlocks.h"
-#include "FullSystem/FullSystem.h"
-#include "FullSystem/ImmaturePoint.h"
+#include "util/settings.hpp"
+#include "util/globalCalib.hpp"
+#include "DSO_system/HessianBlocks.hpp"
+#include "DSO_system/FullSystem.hpp"
+#include "DSO_system/ImmaturePoint.hpp"
 
 namespace dso
 {
@@ -154,7 +154,8 @@ void PangolinDSOViewer::run()
 
 
     pangolin::Var<int> settings_nPts("ui.activePoints", setting_desiredPointDensity, 50, 5000, false);
-    pangolin::Var<int> settings_nCandidates("ui.pointCandidates", setting_desiredImmatureDensity, 50, 5000, false);
+    pangolin::Var<int> settings_nCandidates("ui.pointCandidates", setting_desiredImmatureDensity, 50,
+                                            5000, false);
     pangolin::Var<int> settings_nMaxFrames("ui.maxFrames", setting_maxFrames, 4, 10, false);
     pangolin::Var<double> settings_kfFrequency("ui.kfFrequency", setting_kfGlobalWeight, 0.1, 3, false);
     pangolin::Var<double> settings_gradHistAdd("ui.minGradAdd", setting_minGradHistAdd, 0, 15, false);
@@ -187,7 +188,8 @@ void PangolinDSOViewer::run()
                 }
 
 
-                refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH, this->settings_absVarTH,
+                refreshed += (int)(fh->refreshPC(refreshed < 10, this->settings_scaledVarTH,
+                                                 this->settings_absVarTH,
                                                  this->settings_pointCloudMode, this->settings_minRelBS, this->settings_sparsity));
                 fh->drawPC(1);
             }
@@ -207,17 +209,20 @@ void PangolinDSOViewer::run()
 
         if(videoImgChanged)
         {
-            texVideo.Upload(reinterpret_cast<const void*>(internalVideoImg->data.data), GL_BGR, GL_UNSIGNED_BYTE);
+            texVideo.Upload(reinterpret_cast<const void*>(internalVideoImg->data.data), GL_BGR,
+                            GL_UNSIGNED_BYTE);
         }
 
         if(kfImgChanged)
         {
-            texKFDepth.Upload(reinterpret_cast<const void*>(internalKFImg->data.data), GL_BGR, GL_UNSIGNED_BYTE);
+            texKFDepth.Upload(reinterpret_cast<const void*>(internalKFImg->data.data), GL_BGR,
+                              GL_UNSIGNED_BYTE);
         }
 
         if(resImgChanged)
         {
-            texResidual.Upload(reinterpret_cast<const void*>(internalResImg->data.data), GL_BGR, GL_UNSIGNED_BYTE);
+            texResidual.Upload(reinterpret_cast<const void*>(internalResImg->data.data), GL_BGR,
+                               GL_UNSIGNED_BYTE);
         }
 
         videoImgChanged = kfImgChanged = resImgChanged = false;
@@ -477,7 +482,9 @@ void PangolinDSOViewer::drawConstraints()
 
 
 
-void PangolinDSOViewer::publishGraph(const std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>>& connectivity)
+void PangolinDSOViewer::publishGraph(const
+                                     std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>>&
+                                     connectivity)
 {
     if(!setting_render_display3D)
     {
@@ -580,16 +587,13 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
     }
 
     boost::unique_lock<boost::mutex> lk(model3DMutex);
-    struct timeval time_now;
-    gettimeofday(&time_now, NULL);
-    lastNTrackingMs.push_back(((time_now.tv_sec - last_track.tv_sec) * 1000.0f + (time_now.tv_usec - last_track.tv_usec) / 1000.0f));
+
+    lastNTrackingMs.push_back(last_track.restart());
 
     if(lastNTrackingMs.size() > 10)
     {
         lastNTrackingMs.pop_front();
     }
-
-    last_track = time_now;
 
     if(!setting_render_display3D)
     {
@@ -619,7 +623,8 @@ void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
         reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][0] =
             reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][1] =
                 reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][2] =
-                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.0 : image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8;
+                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.0 :
+                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8;
 
 
     videoImgChanged = true;
@@ -644,16 +649,13 @@ void PangolinDSOViewer::pushDepthImage(cv::Mat image)
 
     boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
-    struct timeval time_now;
-    gettimeofday(&time_now, NULL);
-    lastNMappingMs.push_back(((time_now.tv_sec - last_map.tv_sec) * 1000.0f + (time_now.tv_usec - last_map.tv_usec) / 1000.0f));
+
+    lastNMappingMs.push_back(last_map.restart());
 
     if(lastNMappingMs.size() > 10)
     {
         lastNMappingMs.pop_front();
     }
-
-    last_map = time_now;
 
     internalKFImg->data = image;
     kfImgChanged = true;

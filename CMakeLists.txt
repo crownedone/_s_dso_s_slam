@@ -51,9 +51,9 @@ if (Pangolin_FOUND)
     include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/Pangolin/build/external/glew/include)
     set(dso_pangolin_SOURCE_FILES 
       ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.cpp
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.h
+      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.hpp
       ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.cpp
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.h)
+      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.hpp)
     source_group("Pangolin" FILES ${dso_pangolin_SOURCE_FILES})
     set(HAS_PANGOLIN 1)
 else ()
@@ -69,71 +69,70 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 set(dso_UTIL
     ${PROJECT_SOURCE_DIR}/src/util/settings.cpp
-    ${PROJECT_SOURCE_DIR}/src/util/settings.h
-    ${PROJECT_SOURCE_DIR}/src/util/Undistort.h
+    ${PROJECT_SOURCE_DIR}/src/util/settings.hpp
+    ${PROJECT_SOURCE_DIR}/src/util/Undistort.hpp
     ${PROJECT_SOURCE_DIR}/src/util/Undistort.cpp
     ${PROJECT_SOURCE_DIR}/src/util/globalCalib.cpp
-    ${PROJECT_SOURCE_DIR}/src/util/globalCalib.h
-    ${PROJECT_SOURCE_DIR}/src/util/DatasetReader.h
+    ${PROJECT_SOURCE_DIR}/src/util/globalCalib.hpp
+    ${PROJECT_SOURCE_DIR}/src/util/DatasetReader.hpp
     ${PROJECT_SOURCE_DIR}/src/util/Input.hpp
-    ${PROJECT_SOURCE_DIR}/src/util/FrameShell.h
-    ${PROJECT_SOURCE_DIR}/src/util/NumType.h
-    ${PROJECT_SOURCE_DIR}/src/util/nanoflann.h
-    ${PROJECT_SOURCE_DIR}/src/util/MinimalImage.h
-    ${PROJECT_SOURCE_DIR}/src/util/IndexThreadReduce.h
-    ${PROJECT_SOURCE_DIR}/src/util/ImageAndExposure.h
-    ${PROJECT_SOURCE_DIR}/src/util/globalFuncs.h
+    ${PROJECT_SOURCE_DIR}/src/util/FrameShell.hpp
+    ${PROJECT_SOURCE_DIR}/src/util/NumType.hpp
+    ${PROJECT_SOURCE_DIR}/src/util/nanoflann.hpp
+    ${PROJECT_SOURCE_DIR}/src/util/MinimalImage.hpp
+    ${PROJECT_SOURCE_DIR}/src/util/IndexThreadReduce.hpp
+    ${PROJECT_SOURCE_DIR}/src/util/ImageAndExposure.hpp
+    ${PROJECT_SOURCE_DIR}/src/util/globalFuncs.hpp
 ) 
-source_group("Util" FILES ${dso_UTIL})
+source_group("util" FILES ${dso_UTIL})
 set(dso_SYS
-    ${PROJECT_SOURCE_DIR}/src/sys/times.cpp
-    ${PROJECT_SOURCE_DIR}/src/sys/times.h
-    ${PROJECT_SOURCE_DIR}/src/sys/time.h
-    ${PROJECT_SOURCE_DIR}/src/sys/Logging.hpp
+    ${PROJECT_SOURCE_DIR}/src/StopWatch.cpp
+    ${PROJECT_SOURCE_DIR}/src/StopWatch.hpp
+    ${PROJECT_SOURCE_DIR}/src/Logging.hpp
 ) 
-source_group("Sys" FILES ${dso_SYS})
+source_group("sys" FILES ${dso_SYS})
 set(dso_FULLSYSTEM
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/FullSystem.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/FullSystem.h
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/FullSystemOptimize.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/FullSystemOptPoint.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/FullSystemDebugStuff.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/FullSystemMarginalize.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/Residuals.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/Residuals.h
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/ResidualProjections.h
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/CoarseTracker.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/CoarseTracker.h
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/CoarseInitializer.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/CoarseInitializer.h
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/ImmaturePoint.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/ImmaturePoint.h
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/HessianBlocks.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/HessianBlocks.h
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/PixelSelector.cpp
-    ${PROJECT_SOURCE_DIR}/src/FullSystem/PixelSelector.h
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/FullSystem.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/FullSystem.hpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/FullSystemOptimize.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/FullSystemOptPoint.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/FullSystemDebugStuff.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/FullSystemMarginalize.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/Residuals.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/Residuals.hpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/ResidualProjections.hpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/CoarseTracker.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/CoarseTracker.hpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/CoarseInitializer.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/CoarseInitializer.hpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/ImmaturePoint.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/ImmaturePoint.hpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/HessianBlocks.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/HessianBlocks.hpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/PixelSelector.cpp
+    ${PROJECT_SOURCE_DIR}/src/DSO_System/PixelSelector.hpp
 ) 
-source_group("FullSystem" FILES ${dso_FULLSYSTEM})
+source_group("DSO_System" FILES ${dso_FULLSYSTEM})
 set(dso_OPTBACK
     ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/EnergyFunctional.cpp
-    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/EnergyFunctional.h
+    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/EnergyFunctional.hpp
     ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedTopHessian.cpp
-    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedTopHessian.h
+    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedTopHessian.hpp
     ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedSCHessian.cpp
-    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedSCHessian.h
+    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedSCHessian.hpp
     ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/EnergyFunctionalStructs.cpp
-    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/EnergyFunctionalStructs.h
-    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/MatrixAccumulators.h
-    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/RawResidualJacobian.h
+    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/EnergyFunctionalStructs.hpp
+    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/MatrixAccumulators.hpp
+    ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/RawResidualJacobian.hpp
 )
 source_group("OptimizationBackend" FILES ${dso_OPTBACK})
 set(dso_IO
     ${PROJECT_SOURCE_DIR}/src/IOWrapper/OpenCV/ImageDisplay_OpenCV.cpp
     ${PROJECT_SOURCE_DIR}/src/IOWrapper/OpenCV/ImageRW_OpenCV.cpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageDisplay.h
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageRW.h
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Output3DWrapper.h
-    #${PROJECT_SOURCE_DIR}/src/IOWrapper/OutputWrapper/SampleOutputWrapper.h
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageDisplay.hpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageRW.hpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Output3DWrapper.hpp
+    #${PROJECT_SOURCE_DIR}/src/IOWrapper/OutputWrapper/SampleOutputWrapper.hpp
 )
 source_group("IO" FILES ${dso_IO})
 
@@ -162,25 +161,24 @@ include_directories(
 ) 
 
 # DSO Library (will be shared when we got rid of all the static settings)
-add_library(${DSO} ${dso_SOURCE_FILES} ${dso_pangolin_SOURCE_FILES})
+add_library(${DSO} ${dso_SOURCE_FILES})
 target_link_libraries(${DSO}
 glog::glog
 ${OpenCV_LIBS}
 ${EIGEN3_LIBS}
-${Pangolin_LIBRARIES}
 Boost::system Boost::thread Boost::filesystem
 SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl
 )
 
 # Main Executable
-add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(exe_DSO_SLAM ${DSO} gflags)
+add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp ${dso_pangolin_SOURCE_FILES})
+target_link_libraries(exe_DSO_SLAM ${DSO} ${Pangolin_LIBRARIES} gflags)
 add_dependencies(exe_DSO_SLAM ${DSO})
 
 # Tests
 add_executable(unit_DSO_SLAM ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${dso_TESTS})
-target_link_libraries(unit_DSO_SLAM ${PROJECT_NAME} gflags)
-add_dependencies(unit_DSO_SLAM ${PROJECT_NAME})
+target_link_libraries(unit_DSO_SLAM ${DSO} gflags)
+add_dependencies(unit_DSO_SLAM ${DSO})
 
 
 #### APPENDIX #### Copy missing dll files (Only Windows)
@@ -226,8 +224,4 @@ add_custom_command(TARGET unit_DSO_SLAM POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
     $<TARGET_FILE_DIR:unit_DSO_SLAM>)
-add_custom_command(TARGET unit_DSO_SLAM POST_BUILD 
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/gflags.dll
-    $<TARGET_FILE_DIR:unit_DSO_SLAM>/gflags_debug.dll)
 endif()

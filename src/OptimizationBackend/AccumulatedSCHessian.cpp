@@ -22,11 +22,11 @@
 */
 
 
-#include "OptimizationBackend/AccumulatedSCHessian.h"
-#include "OptimizationBackend/EnergyFunctional.h"
-#include "OptimizationBackend/EnergyFunctionalStructs.h"
+#include "OptimizationBackend/AccumulatedSCHessian.hpp"
+#include "OptimizationBackend/EnergyFunctional.hpp"
+#include "OptimizationBackend/EnergyFunctionalStructs.hpp"
 
-#include "FullSystem/HessianBlocks.h"
+#include "DSO_system/HessianBlocks.hpp"
 
 namespace dso
 {
@@ -192,7 +192,8 @@ void AccumulatedSCHessianSSE::stitchDoubleInternal(
 //  }
 }
 
-void AccumulatedSCHessianSSE::stitchDouble(MatXX& H, VecX& b, EnergyFunctional const* const EF, int tid)
+void AccumulatedSCHessianSSE::stitchDouble(MatXX& H, VecX& b, EnergyFunctional const* const EF,
+                                           int tid)
 {
 
     int nf = nframes[0];
