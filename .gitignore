@@ -1,14 +1,12 @@
 *.pro
 *.pro.user
 *.pro.user*
-build*
-build-*
 *.o
 *.so
 *.a
 *.so.*
-thirdparty/
 /thirdparty/Pangolin
 /.vs
 /CMakeSettings.json
 /bin/
+/build

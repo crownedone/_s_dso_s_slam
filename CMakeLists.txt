@@ -15,6 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # flags
 add_definitions("-D__SSE3__")
+#add_definitions("-DENABLE_SSE")
 add_definitions("-DNOMINMAX")
 add_definitions("-D_USE_MATH_DEFINES")
 
