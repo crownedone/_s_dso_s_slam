@@ -59,7 +59,6 @@ typedef Eigen::Matrix<double, CPARS, CPARS> MatCC;
 #define MatToDynamic(x) MatXX(x)
 
 
-
 typedef Eigen::Matrix<double, CPARS, 10> MatC10;
 typedef Eigen::Matrix<double, 10, 10> Mat1010;
 typedef Eigen::Matrix<double, 13, 13> Mat1313;

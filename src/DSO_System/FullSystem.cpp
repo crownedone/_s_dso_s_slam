@@ -1073,8 +1073,8 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
     {
         if(goStepByStep && lastRefStopID != coarseTracker->refFrameID)
         {
-            MinimalImageF3 img(wG[0], hG[0], fh->dI.ptr<Eigen::Vector3f>());
-            IOWrap::displayImage("frameToTrack", &img);
+            cv::Mat img(hG[0], wG[0], CV_32FC3, fh->dI.ptr<Eigen::Vector3f>(), cv::Mat::AUTO_STEP);
+            IOWrap::displayImage("frameToTrack", img);
 
             while(true)
             {

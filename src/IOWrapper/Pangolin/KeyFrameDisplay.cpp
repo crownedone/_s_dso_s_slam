@@ -224,8 +224,8 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
     }
 
     // make data
-    Vec3f* tmpVertexBuffer = new Vec3f[numSparsePoints * patternNum];
-    Vec3b* tmpColorBuffer = new Vec3b[numSparsePoints * patternNum];
+    cv::Vec3f* tmpVertexBuffer = new cv::Vec3f[numSparsePoints * patternNum];
+    cv::Vec3b* tmpColorBuffer = new cv::Vec3b[numSparsePoints * patternNum];
     int vertexBufferNumPoints = 0;
 
     for(int i = 0; i < numSparsePoints; i++)

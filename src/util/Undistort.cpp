@@ -33,9 +33,8 @@
 #include "util/settings.hpp"
 #include "util/globalFuncs.hpp"
 #include "IOWrapper/ImageDisplay.hpp"
-#include "IOWrapper/ImageRW.hpp"
 #include "util/Undistort.hpp"
-
+#include <opencv2/imgcodecs.hpp>
 
 namespace dso
 {
@@ -124,109 +123,89 @@ PhotometricUndistorter::PhotometricUndistorter(
 
 
     LOG_INFO("Reading Vignette Image from %s\n", vignetteImage.c_str());
-    MinimalImage<unsigned short>* vm16 = IOWrap::readImageBW_16U(vignetteImage.c_str());
-    MinimalImageB* vm8 = IOWrap::readImageBW_8U(vignetteImage.c_str());
-    vignetteMap = new float[w * h];
-    vignetteMapInv = new float[w * h];
+    cv::Mat vm16 = cv::imread(vignetteImage, cv::IMREAD_UNCHANGED);
+    cv::Mat vm8 = cv::imread(vignetteImage, cv::IMREAD_GRAYSCALE);
 
-    if(vm16 != 0)
+    if (vm16.depth() != CV_16U)
     {
-        if(vm16->w != w || vm16->h != h)
+        vm16 = cv::Mat();
+        LOG_WARNING("Vignette image has no 16 bit type");
+    }
+
+    if (vm8.depth() != CV_8U)
+    {
+        vm8 = cv::Mat();
+        LOG_WARNING("Vignette image has no 8 bit type");
+    }
+
+    vignetteMap = cv::Mat(1, w * h, CV_32F);
+    vignetteMapInv = cv::Mat(1, w * h, CV_32F);
+
+    if(!vm16.empty())
+    {
+        if(vm16.cols != w || vm16.rows != h)
         {
-            LOG_INFO("PhotometricUndistorter: Invalid vignette image size! got %d x %d, expected %d x %d\n",
-                     vm16->w, vm16->h, w, h);
-
-            if(vm16 != 0)
-            {
-                delete vm16;
-            }
-
-            if(vm8 != 0)
-            {
-                delete vm8;
-            }
-
+            LOG_ERROR("PhotometricUndistorter: Invalid vignette image size! got %d x %d, expected %d x %d\n",
+                      vm16.cols, vm16.rows, w, h);
             return;
         }
 
         float maxV = 0;
+        unsigned short* vm16Data = vm16.ptr<unsigned short>();
+        float* vignetteMapData = vignetteMap.ptr<float>();
 
-        for(int i = 0; i < w * h; i++)
-            if(vm16->at(i) > maxV)
-            {
-                maxV = vm16->at(i);
-            }
-
-        for(int i = 0; i < w * h; i++)
+        for (size_t i = 0; i < vm16.rows * vm16.cols; ++i)
         {
-            vignetteMap[i] = vm16->at(i) / maxV;
+            maxV = std::max(static_cast<float>(vm16Data[i]), maxV);
+        }
+
+        double minVal, maxVal;
+        cv::minMaxLoc(vm16, &minVal, &maxVal);
+
+        maxV = static_cast<float>(maxVal);
+
+        for (size_t i = 0; i < vm16.rows * vm16.cols; ++i)
+        {
+            vignetteMapData[i] = static_cast<float>(vm16Data[i]) / maxV;
         }
     }
-    else if(vm8 != 0)
+    else if(!vm8.empty())
     {
-        if(vm8->w != w || vm8->h != h)
+        if(vm8.cols != w || vm8.rows != h)
         {
-            LOG_INFO("PhotometricUndistorter: Invalid vignette image size! got %d x %d, expected %d x %d\n",
-                     vm8->w, vm8->h, w, h);
-
-            if(vm16 != 0)
-            {
-                delete vm16;
-            }
-
-            if(vm8 != 0)
-            {
-                delete vm8;
-            }
-
+            LOG_ERROR("PhotometricUndistorter: Invalid vignette image size! got %d x %d, expected %d x %d\n",
+                      vm8.cols, vm8.rows, w, h);
             return;
         }
 
+
         float maxV = 0;
+        unsigned char* vm8Data = vm8.ptr<unsigned char>();
+        float* vignetteMapData = vignetteMap.ptr<float>();
 
-        for(int i = 0; i < w * h; i++)
-            if(vm8->at(i) > maxV)
-            {
-                maxV = vm8->at(i);
-            }
+        double minVal, maxVal;
+        cv::minMaxLoc(vm8, &minVal, &maxVal);
 
-        for(int i = 0; i < w * h; i++)
+        maxV = static_cast<float>(maxVal);
+
+        for (size_t i = 0; i < vm8.rows * vm8.cols; ++i)
         {
-            vignetteMap[i] = vm8->at(i) / maxV;
+            vignetteMapData[i] = static_cast<float>(vm8Data[i]) / maxV;
         }
     }
     else
     {
-        LOG_INFO("PhotometricUndistorter: Invalid vignette image\n");
-
-        if(vm16 != 0)
-        {
-            delete vm16;
-        }
-
-        if(vm8 != 0)
-        {
-            delete vm8;
-        }
-
+        LOG_WARNING("PhotometricUndistorter: Invalid vignette image\n");
         return;
     }
 
-    if(vm16 != 0)
-    {
-        delete vm16;
-    }
-
-    if(vm8 != 0)
-    {
-        delete vm8;
-    }
-
-
-    for(int i = 0; i < w * h; i++)
-    {
-        vignetteMapInv[i] = 1.0f / vignetteMap[i];
-    }
+    //float* vignetteMapData = vignetteMap.ptr<float>();
+    //float* vignetteMapInvData = vignetteMapInv.ptr<float>();
+    cv::divide(1.0, vignetteMap, vignetteMapInv);
+    //for(int i = 0; i < w * h; i++)
+    //{
+    //    vignetteMapInv[i] = 1.0f / vignetteMap[i];
+    //}
 
 
     LOG_INFO("Successfully read photometric calibration!\n");
@@ -234,16 +213,6 @@ PhotometricUndistorter::PhotometricUndistorter(
 }
 PhotometricUndistorter::~PhotometricUndistorter()
 {
-    if(vignetteMap != 0)
-    {
-        delete[] vignetteMap;
-    }
-
-    if(vignetteMapInv != 0)
-    {
-        delete[] vignetteMapInv;
-    }
-
     delete output;
 }
 
@@ -283,11 +252,30 @@ void PhotometricUndistorter::unMapFloatImage(float* image)
     }
 }
 
-template<typename T>
-void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, float factor)
+
+void PhotometricUndistorter::processFrame(const cv::Mat& image_in, float exposure_time,
+                                          float factor)
 {
     int wh = w * h;
     float* data = reinterpret_cast<float*>(output->image.data);
+
+    const unsigned char* inDataC = nullptr;
+    const unsigned short* inDataS = nullptr;
+
+    if (image_in.depth() == CV_8U)
+    {
+        inDataC = image_in.ptr<const unsigned char>();
+    }
+    else if (image_in.depth() == CV_16U)
+    {
+        inDataS = image_in.ptr<const unsigned short>();
+    }
+    else
+    {
+        assert(false);
+    }
+
+
     assert(output->w == w && output->h == h);
     assert(data != 0);
 
@@ -297,7 +285,14 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
     {
         for(int i = 0; i < wh; i++)
         {
-            data[i] = factor * image_in[i];
+            if (inDataC)
+            {
+                data[i] = factor * inDataC[i];
+            }
+            else if (inDataS)
+            {
+                data[i] = factor * inDataS[i];
+            }
         }
 
         output->exposure_time = exposure_time;
@@ -307,14 +302,23 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
     {
         for(int i = 0; i < wh; i++)
         {
-            data[i] = G[image_in[i]];
+            if (image_in.depth() == CV_8U)
+            {
+                data[i] = G[image_in.at<unsigned char>(i)];
+            }
+            else if(image_in.depth() == CV_16U)
+            {
+                data[i] = G[image_in.at<unsigned short>(i)];
+            }
         }
 
         if(setting_photometricCalibration == 2)
         {
-            for(int i = 0; i < wh; i++)
+            const float* vigMapInvData = vignetteMapInv.ptr<const float>();
+
+            for (int i = 0; i < wh; i++)
             {
-                data[i] *= vignetteMapInv[i];
+                data[i] *= vigMapInvData[i];
             }
         }
 
@@ -329,14 +333,6 @@ void PhotometricUndistorter::processFrame(T* image_in, float exposure_time, floa
     }
 
 }
-template void PhotometricUndistorter::processFrame<unsigned char>(unsigned char* image_in,
-        float exposure_time, float factor);
-template void PhotometricUndistorter::processFrame<unsigned short>(unsigned short* image_in,
-        float exposure_time, float factor);
-
-
-
-
 
 Undistort::~Undistort()
 {
@@ -515,17 +511,17 @@ void Undistort::loadPhotometricCalibration(std::string file, std::string noiseIm
 }
 
 template<typename T>
-ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float exposure,
+ImageAndExposure* Undistort::undistort(const cv::Mat& image_raw, float exposure,
                                        double timestamp, float factor) const
 {
-    if(image_raw->w != wOrg || image_raw->h != hOrg)
+    if(image_raw.cols != wOrg || image_raw.rows != hOrg)
     {
-        LOG_INFO("Undistort::undistort: wrong image size (%d %d instead of %d %d) \n", image_raw->w,
-                 image_raw->h, w, h);
+        LOG_INFO("Undistort::undistort: wrong image size (%d %d instead of %d %d) \n", image_raw.cols,
+                 image_raw.rows, w, h);
         exit(1);
     }
 
-    photometricUndist->processFrame<T>(reinterpret_cast<T*>(image_raw->data.data), exposure, factor);
+    photometricUndist->processFrame(image_raw, exposure, factor);
     ImageAndExposure* result = new ImageAndExposure(w, h, timestamp);
     photometricUndist->output->copyMetaTo(*result);
 
@@ -637,9 +633,9 @@ ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float e
 
     return result;
 }
-template ImageAndExposure* Undistort::undistort<unsigned char>(const MinimalImage<unsigned char>*
+template ImageAndExposure* Undistort::undistort<unsigned char>(const cv::Mat&
         image_raw, float exposure, double timestamp, float factor) const;
-template ImageAndExposure* Undistort::undistort<unsigned short>(const MinimalImage<unsigned short>*
+template ImageAndExposure* Undistort::undistort<unsigned short>(const cv::Mat&
         image_raw, float exposure, double timestamp, float factor) const;
 
 

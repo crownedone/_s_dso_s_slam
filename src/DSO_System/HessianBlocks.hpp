@@ -35,7 +35,6 @@
 #include "DSO_system/Residuals.hpp"
 #include "util/ImageAndExposure.hpp"
 
-
 namespace dso
 {
 
@@ -183,7 +182,7 @@ struct FrameHessian
     SE3 PRE_worldToCam;
     SE3 PRE_camToWorld;
     std::vector<FrameFramePrecalc, Eigen::aligned_allocator<FrameFramePrecalc>> targetPrecalc;
-    MinimalImageB3* debugImage;
+    cv::Mat debugImage;
 
 
     inline Vec6 w2c_leftEps() const
@@ -259,11 +258,6 @@ struct FrameHessian
         assert(efFrame == 0);
         release();
         instanceCounter--;
-
-        if(debugImage != 0)
-        {
-            delete debugImage;
-        }
     };
     inline FrameHessian()
     {

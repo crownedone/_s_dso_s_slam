@@ -33,9 +33,10 @@
 #include "DSO_system/FullSystem.hpp"
 #include "DSO_system/HessianBlocks.hpp"
 #include "DSO_system/Residuals.hpp"
-#include "OptimizationBackend/EnergyFunctionalStructs.hpp"
-#include "IOWrapper/ImageRW.hpp"
 #include <algorithm>
+#include "OptimizationBackend/EnergyFunctionalStructs.hpp"
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
@@ -456,14 +457,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
                       setting_huberTH; // energy for r=setting_coarseCutoffTH.
 
 
-    MinimalImageB3* resImage = 0;
-
-    if(debugPlot)
-    {
-        resImage = new MinimalImageB3(wl, hl);
-        //resImage->setConst(Vec3b(255, 255, 255));
-        resImage->data.setTo(cv::Scalar::all(255));
-    }
+    cv::Mat resImage = debugPlot ? cv::Mat(hl, wl, CV_8UC3, cv::Scalar::all(255)) : cv::Mat();
 
     int nl = pc_n[lvl];
     float* lpc_u = pc_u[lvl];
@@ -541,7 +535,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
         {
             if(debugPlot)
             {
-                resImage->setPixel4(lpc_u[i], lpc_v[i], Vec3b(0, 0, 255));
+                cv::circle(resImage, cv::Point(lpc_u[i], lpc_v[i]), 2, cv::Scalar(0, 0, 255));
             }
 
             E += maxEnergy;
@@ -552,9 +546,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
         {
             if(debugPlot)
             {
-                resImage->setPixel4(lpc_u[i], lpc_v[i],
-                                    Vec3b(static_cast<unsigned char>(residual + 128), static_cast<unsigned char>(residual + 128),
-                                          static_cast<unsigned char>(residual + 128)));
+                cv::circle(resImage, cv::Point(lpc_u[i], lpc_v[i]), 2,
+                           cv::Scalar(residual + 128, residual + 128, residual + 128));
             }
 
             E += hw * residual * residual * (2 - hw);
@@ -592,7 +585,6 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
     {
         IOWrap::displayImage("RES", resImage, false);
         IOWrap::waitKey(0);
-        delete resImage;
     }
 
     Vec6 rs;
@@ -933,9 +925,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
             }
         }
 
-
-        MinimalImageB3 mf(w[lvl], h[lvl]);
-        mf.setBlack();
+        cv::Mat mf(h[lvl], w[lvl], CV_8UC3, cv::Scalar::all(0));
 
         for(int i = 0; i < h[lvl]*w[lvl]; i++)
         {
@@ -946,7 +936,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
                 c = 255;
             }
 
-            mf.at(i) = Vec3b(c, c, c);
+            mf.at<cv::Vec3b>(i) = cv::Vec3b(c, c, c);
         }
 
         int wl = w[lvl];
@@ -991,8 +981,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
                 if(bp[0] > 0 || nid >= 3)
                 {
                     float id = ((sid / nid) - minID) / ((maxID - minID));
-                    mf.setPixelCirc(x, y, makeJet3B(id));
-                    //mf.at(idx) = makeJet3B(id);
+                    cv::circle(mf, cv::Point(x, y), 3, makeJet3B(id));
                 }
             }
 
@@ -1000,14 +989,14 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
 
         for(IOWrap::Output3DWrapper* ow : wraps)
         {
-            ow->pushDepthImage(mf.data);
+            ow->pushDepthImage(mf);
         }
 
         if(debugSaveImages)
         {
             char buf[1000];
             snprintf(buf, 1000, "images_out/predicted_%05d_%05d.png", lastRef->shell->id, refFrameID);
-            IOWrap::writeImage(buf, &mf);
+            cv::imwrite(buf, mf);
         }
 
     }
@@ -1023,11 +1012,11 @@ void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*
     }
 
     int lvl = 0;
-    MinimalImageF mim(w[lvl], h[lvl], idepth[lvl]);
+    cv::Mat mim(h[lvl], w[lvl], CV_32F, idepth[lvl], cv::Mat::AUTO_STEP);
 
     for(IOWrap::Output3DWrapper* ow : wraps)
     {
-        ow->pushDepthImageFloat(&mim, lastRef);
+        ow->pushDepthImageFloat(mim, lastRef);
     }
 }
 

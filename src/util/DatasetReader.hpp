@@ -32,8 +32,7 @@
 #include <algorithm>
 
 #include "util/Undistort.hpp"
-#include "IOWrapper/ImageRW.hpp"
-
+#include <opencv2/imgcodecs.hpp>
 #if HAS_ZIPLIB
     #include "zip.hpp"
 #endif
@@ -215,7 +214,7 @@ public:
     }
 
 
-    MinimalImageB* getImageRaw(int id)
+    cv::Mat getImageRaw(int id)
     {
         return getImageRaw_internal(id, 0);
     }
@@ -242,12 +241,12 @@ public:
 private:
 
 
-    MinimalImageB* getImageRaw_internal(int id, int unused)
+    cv::Mat getImageRaw_internal(int id, int unused)
     {
         if(!isZipped)
         {
             // CHANGE FOR ZIP FILE
-            return IOWrap::readImageBW_8U(files[id]);
+            return cv::imread(files[id], cv::IMREAD_GRAYSCALE);
         }
         else
         {
@@ -289,12 +288,12 @@ private:
 
     ImageAndExposure* getImage_internal(int id, int unused)
     {
-        MinimalImageB* minimg = getImageRaw_internal(id, 0);
+
+        cv::Mat minimg = getImageRaw_internal(id, 0);
         ImageAndExposure* ret2 = undistort->undistort<unsigned char>(
                                      minimg,
                                      (exposures.size() == 0 ? 1.0f : exposures[id]),
                                      (timestamps.size() == 0 ? 0.0 : timestamps[id]));
-        delete minimg;
         return ret2;
     }
 

@@ -26,10 +26,11 @@
 
 #include <pangolin/pangolin.h>
 #include "boost/thread.hpp"
-#include "util/MinimalImage.hpp"
+
 #include "IOWrapper/Output3DWrapper.hpp"
 #include <map>
 #include <deque>
+#include <opencv2/core.hpp>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -67,7 +68,7 @@ public:
     void run();
     void close();
 
-    void addImageToDisplay(std::string name, MinimalImageB3* image);
+    void addImageToDisplay(std::string name, const cv::Mat& image);
     void clearAllImagesToDisplay();
 
 
@@ -81,7 +82,7 @@ public:
 
 
     virtual void pushLiveFrame(FrameHessian* image) override;
-    virtual void pushDepthImage(cv::Mat image) override;
+    virtual void pushDepthImage(const cv::Mat& image) override;
     virtual bool needPushDepthImage() override;
 
     virtual void join() override;
@@ -101,9 +102,9 @@ private:
 
     // images rendering
     boost::mutex openImagesMutex;
-    MinimalImageB3* internalVideoImg;
-    MinimalImageB3* internalKFImg;
-    MinimalImageB3* internalResImg;
+    cv::Mat internalVideoImg;
+    cv::Mat internalKFImg;
+    cv::Mat internalResImg;
     bool videoImgChanged, kfImgChanged, resImgChanged;
 
 

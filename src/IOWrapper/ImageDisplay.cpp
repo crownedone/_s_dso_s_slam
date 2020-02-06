@@ -46,11 +46,18 @@ boost::mutex openCVdisplayMutex;
 
 
 
-void displayImage(const char* windowName, const cv::Mat& image, bool autoSize)
+void displayImage(const char* windowName, const cv::Mat& img, bool autoSize)
 {
     if(disableAllDisplay)
     {
         return;
+    }
+
+    cv::Mat image = img;
+
+    if (image.depth() == CV_32F)
+    {
+        image = img * (1 / 254.0f);
     }
 
     boost::unique_lock<boost::mutex> lock(openCVdisplayMutex);
@@ -130,81 +137,6 @@ void displayImageStitch(const char* windowName, const std::vector<cv::Mat> image
 
     displayImage(windowName, stitch, false);
 }
-
-
-
-void displayImage(const char* windowName, const MinimalImageB* img, bool autoSize)
-{
-    displayImage(windowName, img->data, autoSize);
-}
-void displayImage(const char* windowName, const MinimalImageB3* img, bool autoSize)
-{
-    displayImage(windowName, img->data, autoSize);
-}
-void displayImage(const char* windowName, const MinimalImageF* img, bool autoSize)
-{
-    displayImage(windowName, img->data * (1 / 254.0f), autoSize);
-}
-void displayImage(const char* windowName, const MinimalImageF3* img, bool autoSize)
-{
-    displayImage(windowName, img->data * (1 / 254.0f), autoSize);
-}
-void displayImage(const char* windowName, const MinimalImageB16* img, bool autoSize)
-{
-    displayImage(windowName, img->data, autoSize);
-}
-
-
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageB*> images, int cc,
-                        int rc)
-{
-    std::vector<cv::Mat> imagesCV;
-
-    for(size_t i = 0; i < images.size(); i++)
-    {
-        imagesCV.push_back(images[i]->data);
-    }
-
-    displayImageStitch(windowName, imagesCV, cc, rc);
-}
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageB3*> images, int cc,
-                        int rc)
-{
-    std::vector<cv::Mat> imagesCV;
-
-    for(size_t i = 0; i < images.size(); i++)
-    {
-        imagesCV.push_back(images[i]->data);
-    }
-
-    displayImageStitch(windowName, imagesCV, cc, rc);
-}
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageF*> images, int cc,
-                        int rc)
-{
-    std::vector<cv::Mat> imagesCV;
-
-    for(size_t i = 0; i < images.size(); i++)
-    {
-        imagesCV.push_back(images[i]->data);
-    }
-
-    displayImageStitch(windowName, imagesCV, cc, rc);
-}
-void displayImageStitch(const char* windowName, const std::vector<MinimalImageF3*> images, int cc,
-                        int rc)
-{
-    std::vector<cv::Mat> imagesCV;
-
-    for(size_t i = 0; i < images.size(); i++)
-    {
-        imagesCV.push_back(images[i]->data);
-    }
-
-    displayImageStitch(windowName, imagesCV, cc, rc);
-}
-
-
 
 int waitKey(int milliseconds)
 {

@@ -51,7 +51,7 @@
 #include "util/DatasetReader.hpp"
 
 #include "IOWrapper/Pangolin/PangolinDSOViewer.hpp"
-#include "IOWrapper/OutputWrapper/SampleOutputWrapper.hpp"
+#include "IOWrapper/SampleOutputWrapper.hpp"
 
 // Path to the sequence folder.
 DEFINE_string(sequenceFolder, "", "path to your sequence Folder");

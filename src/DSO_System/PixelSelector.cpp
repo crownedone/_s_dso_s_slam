@@ -25,7 +25,7 @@
 #include "DSO_system/PixelSelector.hpp"
 
 //
-
+#include <opencv2/imgproc.hpp>
 
 
 #include "util/NumType.hpp"
@@ -332,7 +332,7 @@ int PixelSelector::makeMaps(
         int h = hG[0];
 
 
-        MinimalImageB3 img(w, h);
+        cv::Mat img(h, w, CV_8UC3);
 
         for(int i = 0; i < w * h; i++)
         {
@@ -343,10 +343,10 @@ int PixelSelector::makeMaps(
                 c = 255;
             }
 
-            img.at(i) = Vec3b(c, c, c);
+            img.at<cv::Vec3b>(i) = cv::Vec3b(c, c, c);
         }
 
-        IOWrap::displayImage("Selector Image", &img);
+        IOWrap::displayImage("Selector Image", img);
 
         for(int y = 0; y < h; y++)
             for(int x = 0; x < w; x++)
@@ -355,19 +355,19 @@ int PixelSelector::makeMaps(
 
                 if(map_out[i] == 1)
                 {
-                    img.setPixelCirc(x, y, Vec3b(0, 255, 0));
+                    cv::circle(img, cv::Point(x, y), 3, cv::Vec3b(0, 255, 0), cv::FILLED);
                 }
                 else if(map_out[i] == 2)
                 {
-                    img.setPixelCirc(x, y, Vec3b(255, 0, 0));
+                    cv::circle(img, cv::Point(x, y), 3, cv::Vec3b(255, 0, 0), cv::FILLED);
                 }
                 else if(map_out[i] == 4)
                 {
-                    img.setPixelCirc(x, y, Vec3b(0, 0, 255));
+                    cv::circle(img, cv::Point(x, y), 3, cv::Vec3b(0, 0, 255), cv::FILLED);
                 }
             }
 
-        IOWrap::displayImage("Selector Pixels", &img);
+        IOWrap::displayImage("Selector Pixels", img);
     }
 
     return numHaveSub;

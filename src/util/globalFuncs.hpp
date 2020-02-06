@@ -28,6 +28,7 @@
 #include "util/NumType.hpp"
 #include "IOWrapper/ImageDisplay.hpp"
 #include "fstream"
+#include <opencv2/core/matx.hpp>
 
 namespace dso
 {
@@ -371,13 +372,13 @@ inline Vec3f makeRainbowf3F(float id)
     return Vec3f(1, 1, 1);
 }
 
-inline Vec3b makeRainbow3B(float id)
+inline cv::Vec3b makeRainbow3B(float id)
 {
     id *= freeDebugParam3;
 
     if(!(id > 0))
     {
-        return Vec3b(255, 255, 255);
+        return cv::Vec3b(255, 255, 255);
     }
 
     int icP = static_cast<int>(id);
@@ -386,35 +387,35 @@ inline Vec3b makeRainbow3B(float id)
 
     if(icP == 0)
     {
-        return Vec3b(static_cast<unsigned char>(255.f * (1.f - ifP)),
-                     static_cast<unsigned char>(255.f * ifP),     0);
+        return cv::Vec3b(static_cast<unsigned char>(255.f * (1.f - ifP)),
+                         static_cast<unsigned char>(255.f * ifP),     0);
     }
 
     if(icP == 1)
     {
-        return Vec3b(0, static_cast<unsigned char>(255.f * (1.f - ifP)),
-                     static_cast<unsigned char>(255.f * ifP));
+        return cv::Vec3b(0, static_cast<unsigned char>(255.f * (1.f - ifP)),
+                         static_cast<unsigned char>(255.f * ifP));
     }
 
     if(icP == 2)
     {
-        return Vec3b(static_cast<unsigned char>(255.f * ifP), 0,
-                     static_cast<unsigned char>(255.f * (1.f - ifP)));
+        return cv::Vec3b(static_cast<unsigned char>(255.f * ifP), 0,
+                         static_cast<unsigned char>(255.f * (1.f - ifP)));
     }
 
-    return Vec3b(255, 255, 255);
+    return cv::Vec3b(255, 255, 255);
 }
 
-inline Vec3b makeJet3B(float id)
+inline cv::Vec3b makeJet3B(float id)
 {
     if(id <= 0)
     {
-        return Vec3b(128, 0, 0);
+        return cv::Vec3b(128, 0, 0);
     }
 
     if(id >= 1)
     {
-        return Vec3b(0, 0, 128);
+        return cv::Vec3b(0, 0, 128);
     }
 
     int icP = static_cast<int>(id * 8.f);
@@ -422,72 +423,67 @@ inline Vec3b makeJet3B(float id)
 
     if(icP == 0)
     {
-        return Vec3b(static_cast<unsigned char>(255 * (0.5 + 0.5 * ifP)),  0,  0);
+        return cv::Vec3b(static_cast<unsigned char>(255 * (0.5 + 0.5 * ifP)),  0,  0);
     }
 
     if(icP == 1)
     {
-        return Vec3b(255, static_cast<unsigned char>(255 * (0.5 * ifP)), 0);
+        return cv::Vec3b(255, static_cast<unsigned char>(255 * (0.5 * ifP)), 0);
     }
 
     if(icP == 2)
     {
-        return Vec3b(255, static_cast<unsigned char>(255 * (0.5 + 0.5 * ifP)), 0);
+        return cv::Vec3b(255, static_cast<unsigned char>(255 * (0.5 + 0.5 * ifP)), 0);
     }
 
     if(icP == 3)
     {
-        return Vec3b(static_cast<unsigned char>(255 * (1 - 0.5 * ifP)), 255,
-                     static_cast<unsigned char>(255 * (0.5 * ifP)));
+        return cv::Vec3b(static_cast<unsigned char>(255 * (1 - 0.5 * ifP)), 255,
+                         static_cast<unsigned char>(255 * (0.5 * ifP)));
     }
 
     if(icP == 4)
     {
-        return Vec3b(static_cast<unsigned char>(255 * (0.5 - 0.5 * ifP)), 255,
-                     static_cast<unsigned char>(255 * (0.5 + 0.5 * ifP)));
+        return cv::Vec3b(static_cast<unsigned char>(255 * (0.5 - 0.5 * ifP)), 255,
+                         static_cast<unsigned char>(255 * (0.5 + 0.5 * ifP)));
     }
 
     if(icP == 5)
     {
-        return Vec3b(0, static_cast<unsigned char>(255 * (1 - 0.5 * ifP)), 255);
+        return cv::Vec3b(0, static_cast<unsigned char>(255 * (1 - 0.5 * ifP)), 255);
     }
 
     if(icP == 6)
     {
-        return Vec3b(0, static_cast<unsigned char>(255 * (0.5 - 0.5 * ifP)), 255);
+        return cv::Vec3b(0, static_cast<unsigned char>(255 * (0.5 - 0.5 * ifP)), 255);
     }
 
     if(icP == 7)
     {
-        return Vec3b(0, 0, static_cast<unsigned char>(255 * (1 - 0.5 * ifP)));
+        return cv::Vec3b(0, 0, static_cast<unsigned char>(255 * (1 - 0.5 * ifP)));
     }
 
-    return Vec3b(255, 255, 255);
+    return cv::Vec3b(255, 255, 255);
 }
 
-inline Vec3b makeRedGreen3B(float val)  // 0 = red, 1=green, 0.5=yellow.
+inline cv::Vec3b makeRedGreen3B(float val)  // 0 = red, 1=green, 0.5=yellow.
 {
     if(val < 0)
     {
-        return Vec3b(0, 0, 255);
+        return cv::Vec3b(0, 0, 255);
     }
     else if(val < 0.5)
     {
-        return Vec3b(0, static_cast<unsigned char>(255 * 2 * val), 255);
+        return cv::Vec3b(0, static_cast<unsigned char>(255 * 2 * val), 255);
     }
     else if(val < 1)
     {
-        return Vec3b(0, 255, static_cast<unsigned char>(255 - 255 * 2 * (val - 0.5)));
+        return cv::Vec3b(0, 255, static_cast<unsigned char>(255 - 255 * 2 * (val - 0.5)));
     }
     else
     {
-        return Vec3b(0, 255, 0);
+        return cv::Vec3b(0, 255, 0);
     }
 
 }
-
-
-
-
-
 }

@@ -125,7 +125,7 @@ public:
         // can be used to get the raw image / intensity pyramid.
     }
 
-    virtual void pushDepthImage(cv::Mat image) override
+    virtual void pushDepthImage(const cv::Mat& image) override
     {
         // can be used to get the raw image with depth overlay.
     }
@@ -134,7 +134,7 @@ public:
         return false;
     }
 
-    virtual void pushDepthImageFloat(MinimalImageF* image, FrameHessian* KF ) override
+    virtual void pushDepthImageFloat(const cv::Mat& image, FrameHessian* KF ) override
     {
         printf("OUT: Predicted depth for KF %d (id %d, time %f, internal frame-ID %d). CameraToWorld:\n",
                KF->frameID,
@@ -145,16 +145,16 @@ public:
 
         int maxWrite = 5;
 
-        for(int y = 0; y < image->h; y++)
+        for(int y = 0; y < image.rows; y++)
         {
-            for(int x = 0; x < image->w; x++)
+            for(int x = 0; x < image.cols; x++)
             {
-                if(image->at(x, y) <= 0)
+                if(image.at<float>(x, y) <= 0.f)
                 {
                     continue;
                 }
 
-                printf("OUT: Example Idepth at pixel (%d,%d): %f.\n", x, y, image->at(x, y));
+                printf("OUT: Example Idepth at pixel (%d,%d): %f.\n", x, y, image.at<float>(x, y));
                 maxWrite--;
 
                 if(maxWrite == 0)

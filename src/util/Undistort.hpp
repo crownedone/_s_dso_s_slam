@@ -25,7 +25,7 @@
 #pragma once
 
 #include "util/ImageAndExposure.hpp"
-#include "util/MinimalImage.hpp"
+
 #include "util/NumType.hpp"
 #include "Eigen/Core"
 
@@ -49,7 +49,7 @@ public:
     // affine normalizes values to 0 <= I < 256.
     // raw irradiance = a*I + b.
     // output will be written in [output].
-    template<typename T> void processFrame(T* image_in, float exposure_time, float factor = 1);
+    void processFrame(const cv::Mat& image_in, float exposure_time, float factor = 1);
     void unMapFloatImage(float* image);
 
     ImageAndExposure* output;
@@ -68,8 +68,8 @@ public:
 private:
     float G[256 * 256];
     int GDepth;
-    float* vignetteMap;
-    float* vignetteMapInv;
+    cv::Mat vignetteMap;
+    cv::Mat vignetteMapInv;
     int w, h;
     bool valid;
 };
@@ -107,7 +107,7 @@ public:
     };
 
     template<typename T>
-    ImageAndExposure* undistort(const MinimalImage<T>* image_raw, float exposure = 0,
+    ImageAndExposure* undistort(const cv::Mat& image_raw, float exposure = 0,
                                 double timestamp = 0, float factor = 1) const;
     static Undistort* getUndistorterForFile(std::string configFilename, std::string gammaFilename,
                                             std::string vignetteFilename);

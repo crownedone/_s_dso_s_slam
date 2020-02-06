@@ -46,14 +46,10 @@ PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread)
 
     {
         boost::unique_lock<boost::mutex> lk(openImagesMutex);
-        internalVideoImg = new MinimalImageB3(w, h);
-        internalKFImg = new MinimalImageB3(w, h);
-        internalResImg = new MinimalImageB3(w, h);
+        internalVideoImg = cv::Mat(h, w, CV_8UC3, cv::Scalar::all(0));
+        internalKFImg = cv::Mat(h, w, CV_8UC3, cv::Scalar::all(0));
+        internalResImg = cv::Mat(h, w, CV_8UC3, cv::Scalar::all(0));
         videoImgChanged = kfImgChanged = resImgChanged = true;
-
-        internalVideoImg->setBlack();
-        internalKFImg->setBlack();
-        internalResImg->setBlack();
     }
 
 
@@ -209,19 +205,19 @@ void PangolinDSOViewer::run()
 
         if(videoImgChanged)
         {
-            texVideo.Upload(reinterpret_cast<const void*>(internalVideoImg->data.data), GL_BGR,
+            texVideo.Upload(reinterpret_cast<const void*>(internalVideoImg.data), GL_BGR,
                             GL_UNSIGNED_BYTE);
         }
 
         if(kfImgChanged)
         {
-            texKFDepth.Upload(reinterpret_cast<const void*>(internalKFImg->data.data), GL_BGR,
+            texKFDepth.Upload(reinterpret_cast<const void*>(internalKFImg.data), GL_BGR,
                               GL_UNSIGNED_BYTE);
         }
 
         if(resImgChanged)
         {
-            texResidual.Upload(reinterpret_cast<const void*>(internalResImg->data.data), GL_BGR,
+            texResidual.Upload(reinterpret_cast<const void*>(internalResImg.data), GL_BGR,
                                GL_UNSIGNED_BYTE);
         }
 
@@ -370,9 +366,9 @@ void PangolinDSOViewer::reset_internal()
 
 
     openImagesMutex.lock();
-    internalVideoImg->setBlack();
-    internalKFImg->setBlack();
-    internalResImg->setBlack();
+    internalVideoImg.setTo(cv::Scalar::all(0));
+    internalKFImg.setTo(cv::Scalar::all(0));
+    internalResImg.setTo(cv::Scalar::all(0));
     videoImgChanged = kfImgChanged = resImgChanged = true;
     openImagesMutex.unlock();
 
@@ -620,9 +616,9 @@ void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
     boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
     for(int i = 0; i < w * h; i++)
-        reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][0] =
-            reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][1] =
-                reinterpret_cast<Vec3b*>(internalVideoImg->data.data)[i][2] =
+        reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
+            reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
+                reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
                     image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.0 :
                     image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8;
 
@@ -634,7 +630,7 @@ bool PangolinDSOViewer::needPushDepthImage()
 {
     return setting_render_displayDepth;
 }
-void PangolinDSOViewer::pushDepthImage(cv::Mat image)
+void PangolinDSOViewer::pushDepthImage(const cv::Mat& image)
 {
 
     if(!setting_render_displayDepth)
@@ -657,7 +653,7 @@ void PangolinDSOViewer::pushDepthImage(cv::Mat image)
         lastNMappingMs.pop_front();
     }
 
-    internalKFImg->data = image;
+    internalKFImg = image;
     kfImgChanged = true;
 }
 

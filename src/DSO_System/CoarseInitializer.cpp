@@ -38,6 +38,7 @@
 
 #include <Eigen/LU>
 #include <Eigen/Cholesky>
+#include <opencv2/imgproc.hpp>
 
 #if !defined(__SSE3__) && !defined(__SSE2__) && !defined(__SSE1__)
     #include "SSE2NEON.hpp"
@@ -348,12 +349,13 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
     int wl = w[lvl], hl = h[lvl];
     Eigen::Vector3f* colorRef = firstFrame->dIp[lvl].ptr<Eigen::Vector3f>();
 
-    MinimalImageB3 iRImg(wl, hl);
+    cv::Mat iRImg(hl, wl, CV_8UC3);
 
     for(int i = 0; i < wl * hl; i++)
     {
-        iRImg.at(i) = Vec3b(static_cast<unsigned char>(colorRef[i][0]),
-                            static_cast<unsigned char>(colorRef[i][0]), static_cast<unsigned char>(colorRef[i][0]));
+        iRImg.at<cv::Vec3b>(i) = cv::Vec3b(static_cast<unsigned char>(colorRef[i][0]),
+                                           static_cast<unsigned char>(colorRef[i][0]),
+                                           static_cast<unsigned char>(colorRef[i][0]));
     }
 
 
@@ -382,14 +384,12 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 
         if(!point->isGood)
         {
-            iRImg.setPixel9(static_cast<int>(point->u + 0.5f), static_cast<int>(point->v + 0.5f), Vec3b(0, 0,
-                            0));
+            cv::circle(iRImg, cv::Point(point->u + 0.5f, point->v + 0.5f), 2, cv::Scalar(0, 0, 0), cv::FILLED);
         }
-
         else
         {
-            iRImg.setPixel9(static_cast<int>(point->u + 0.5f), static_cast<int>(point->v + 0.5f),
-                            makeRainbow3B(point->iR * fac));
+            cv::circle(iRImg, cv::Point(point->u + 0.5f, point->v + 0.5f), 2, makeRainbow3B(point->iR * fac),
+                       cv::FILLED);
         }
     }
 
@@ -397,7 +397,7 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
     //IOWrap::displayImage("idepth-R", &iRImg, false);
     for(IOWrap::Output3DWrapper* ow : wraps)
     {
-        ow->pushDepthImage(iRImg.data);
+        ow->pushDepthImage(iRImg);
     }
 }
 

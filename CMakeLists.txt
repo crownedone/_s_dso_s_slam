@@ -79,7 +79,6 @@ set(dso_UTIL
     ${PROJECT_SOURCE_DIR}/src/util/FrameShell.hpp
     ${PROJECT_SOURCE_DIR}/src/util/NumType.hpp
     ${PROJECT_SOURCE_DIR}/src/util/nanoflann.hpp
-    ${PROJECT_SOURCE_DIR}/src/util/MinimalImage.hpp
     ${PROJECT_SOURCE_DIR}/src/util/IndexThreadReduce.hpp
     ${PROJECT_SOURCE_DIR}/src/util/ImageAndExposure.hpp
     ${PROJECT_SOURCE_DIR}/src/util/globalFuncs.hpp
@@ -127,12 +126,10 @@ set(dso_OPTBACK
 )
 source_group("OptimizationBackend" FILES ${dso_OPTBACK})
 set(dso_IO
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/OpenCV/ImageDisplay_OpenCV.cpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/OpenCV/ImageRW_OpenCV.cpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageDisplay.cpp
     ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageDisplay.hpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageRW.hpp
     ${PROJECT_SOURCE_DIR}/src/IOWrapper/Output3DWrapper.hpp
-    #${PROJECT_SOURCE_DIR}/src/IOWrapper/OutputWrapper/SampleOutputWrapper.hpp
+    #${PROJECT_SOURCE_DIR}/src/IOWrapper/SampleOutputWrapper.hpp
 )
 source_group("IO" FILES ${dso_IO})
 
