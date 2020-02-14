@@ -24,7 +24,6 @@
 
 #pragma once
 #include "boost/thread.hpp"
-#include "util/MinimalImage.hpp"
 #include "IOWrapper/Output3DWrapper.hpp"
 
 #include "DSO_System/HessianBlocks.hpp"

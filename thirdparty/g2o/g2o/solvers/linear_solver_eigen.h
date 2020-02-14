@@ -68,7 +68,7 @@ public:
         {
             m_Pinv = permutation;
             m_P = permutation.inverse();
-            int size = a.cols();
+            int size = static_cast<int>(a.cols());
             SparseMatrix ap(size, size);
             ap.selfadjointView<Eigen::Upper>() = a.selfadjointView<UpLo>().twistedBy(m_P);
             analyzePattern_preordered(ap, true);

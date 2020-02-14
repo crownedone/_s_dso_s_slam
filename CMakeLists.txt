@@ -68,6 +68,97 @@ endif ()
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
+# DBow2 library:
+set(HDRS_DBOW2
+  src/DBoW2/BowVector.h
+  src/DBoW2/FORB.h 
+  src/DBoW2/FClass.h       
+  src/DBoW2/FeatureVector.h
+  src/DBoW2/ScoringObject.h   
+  src/DBoW2/TemplatedVocabulary.h)
+set(SRCS_DBOW2
+  src/DBoW2/BowVector.cpp
+  src/DBoW2/FORB.cpp      
+  src/DBoW2/FeatureVector.cpp
+  src/DBoW2/ScoringObject.cpp)
+set(HDRS_DUTILS
+  src/DUtils/Random.h
+  src/DUtils/Timestamp.h)
+set(SRCS_DUTILS
+  src/DUtils/Random.cpp
+  src/DUtils/Timestamp.cpp)
+source_group(DBoW_Headers ${HDRS_DBOW2} ${HDRS_DUTILS})
+source_group(DBoW_Sources ${SRCS_DBOW2})
+source_group(DBoW_Utils ${SRCS_DUTILS})
+include_directories(${OpenCV_INCLUDE_DIRS})
+add_library(DBoW2 SHARED ${SRCS_DBOW2} ${SRCS_DUTILS})
+target_link_libraries(DBoW2 ${OpenCV_LIBS})
+
+include_directories(
+${PROJECT_SOURCE_DIR}
+${PROJECT_SOURCE_DIR}/DBoW2
+${PROJECT_SOURCE_DIR}/DUtils
+${EIGEN3_INCLUDE_DIR}
+${Pangolin_INCLUDE_DIRS}
+)
+
+set(ORB_SLAM_HDRS 
+src/ORB_SLAM2_System/System.hpp
+src/ORB_SLAM2_System/Tracking.hpp
+src/ORB_SLAM2_System/LocalMapping.hpp
+src/ORB_SLAM2_System/LoopClosing.hpp
+src/ORB_SLAM2_System/ORBextractor.hpp
+src/ORB_SLAM2_System/ORBmatcher.hpp
+src/ORB_SLAM2_System/FrameDrawer.hpp
+src/ORB_SLAM2_System/Converter.hpp
+src/ORB_SLAM2_System/MapPoint.hpp
+src/ORB_SLAM2_System/KeyFrame.hpp
+src/ORB_SLAM2_System/Map.hpp
+src/ORB_SLAM2_System/MapDrawer.hpp
+src/ORB_SLAM2_System/Optimizer.hpp
+src/ORB_SLAM2_System/PnPsolver.hpp
+src/ORB_SLAM2_System/Frame.hpp
+src/ORB_SLAM2_System/KeyFrameDatabase.hpp
+src/ORB_SLAM2_System/Sim3Solver.hpp
+src/ORB_SLAM2_System/Initializer.hpp
+src/ORB_SLAM2_System/Viewer.hpp
+)
+source_group(ORB_SLAM2_Headers ${ORB_SLAM_HDRS})
+set(ORB_SLAM_SRC 
+src/ORB_SLAM2_System/System.cpp
+src/ORB_SLAM2_System/Tracking.cpp
+src/ORB_SLAM2_System/LocalMapping.cpp
+src/ORB_SLAM2_System/LoopClosing.cpp
+src/ORB_SLAM2_System/ORBextractor.cpp
+src/ORB_SLAM2_System/ORBmatcher.cpp
+src/ORB_SLAM2_System/FrameDrawer.cpp
+src/ORB_SLAM2_System/Converter.cpp
+src/ORB_SLAM2_System/MapPoint.cpp
+src/ORB_SLAM2_System/KeyFrame.cpp
+src/ORB_SLAM2_System/Map.cpp
+src/ORB_SLAM2_System/MapDrawer.cpp
+src/ORB_SLAM2_System/Optimizer.cpp
+src/ORB_SLAM2_System/PnPsolver.cpp
+src/ORB_SLAM2_System/Frame.cpp
+src/ORB_SLAM2_System/KeyFrameDatabase.cpp
+src/ORB_SLAM2_System/Sim3Solver.cpp
+src/ORB_SLAM2_System/Initializer.cpp
+src/ORB_SLAM2_System/Viewer.cpp
+)
+source_group(ORB_SLAM2_Sources ${ORB_SLAM_SRC})
+
+add_library(${ORB_SLAM} SHARED ${ORB_SLAM_SRC})
+add_dependencies(${ORB_SLAM} DBoW2)
+
+target_link_libraries(${ORB_SLAM}
+${OpenCV_LIBS}
+${EIGEN3_LIBS}
+${Pangolin_LIBRARIES}
+DBoW2
+${PROJECT_SOURCE_DIR}/Thirdparty/g2o/bin/g2o.lib
+)
+
+
 set(dso_UTIL
     ${PROJECT_SOURCE_DIR}/src/util/settings.cpp
     ${PROJECT_SOURCE_DIR}/src/util/settings.hpp
@@ -149,7 +240,6 @@ set(dso_TESTS
 source_group("tests" FILES ${dso_TESTS})
 
 
-
 include_directories(
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/src
@@ -168,15 +258,22 @@ Boost::system Boost::thread Boost::filesystem
 SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl
 )
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+
 # Main Executable
 add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp ${dso_pangolin_SOURCE_FILES})
-target_link_libraries(exe_DSO_SLAM ${DSO} ${Pangolin_LIBRARIES} gflags)
-add_dependencies(exe_DSO_SLAM ${DSO})
+target_link_libraries(exe_DSO_SLAM ${DSO} ${ORB_SLAM} ${Pangolin_LIBRARIES} gflags)
+add_dependencies(exe_DSO_SLAM ${DSO} ${ORB_SLAM})
+
+# ORB Slam main
+add_executable(exe_ORB_SLAM ${PROJECT_SOURCE_DIR}/src/rgbd_tum.cpp)
+target_link_libraries(exe_ORB_SLAM ${ORB_SLAM} gflags)
+add_dependencies(exe_ORB_SLAM ${ORB_SLAM})
 
 # Tests
 add_executable(unit_DSO_SLAM ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${dso_TESTS})
-target_link_libraries(unit_DSO_SLAM ${DSO} gflags)
-add_dependencies(unit_DSO_SLAM ${DSO})
+target_link_libraries(unit_DSO_SLAM ${DSO} ${ORB_SLAM} gflags)
+add_dependencies(unit_DSO_SLAM ${DSO} ${ORB_SLAM})
 
 
 #### APPENDIX #### Copy missing dll files (Only Windows)
@@ -203,6 +300,10 @@ add_custom_command(TARGET exe_DSO_SLAM POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/gflags.dll
     $<TARGET_FILE_DIR:exe_DSO_SLAM>/gflags_debug.dll)
+add_custom_command(TARGET exe_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_directory 
+    ${CMAKE_SOURCE_DIR}/thirdparty/g2o/bin
+    $<TARGET_FILE_DIR:exe_DSO_SLAM>)
 
     # copy pangolin dlls
 add_custom_command(TARGET unit_DSO_SLAM POST_BUILD
@@ -221,5 +322,10 @@ add_custom_command(TARGET unit_DSO_SLAM POST_BUILD
 add_custom_command(TARGET unit_DSO_SLAM POST_BUILD 
     COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
+    $<TARGET_FILE_DIR:unit_DSO_SLAM>)
+
+add_custom_command(TARGET unit_DSO_SLAM POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_directory 
+    ${CMAKE_SOURCE_DIR}/thirdparty/g2o/bin
     $<TARGET_FILE_DIR:unit_DSO_SLAM>)
 endif()
