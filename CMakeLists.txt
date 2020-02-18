@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 project(DSO_SLAM)
 
 # later be merged into one ... or not
-set(DSO DSO_LIB)
-set(ORB_SLAM ORB_SLAM_LIB)
+set(DSO lib_DSO)
+set(ORB_SLAM lib_ORB_SLAM2)
 
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
