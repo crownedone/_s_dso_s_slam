@@ -357,7 +357,7 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
     if (!f.good())
     {
         f.close();
-        LOG_INFO(" ... not found. Cannot operate without calibration, shutting down.\n");
+        LOG_ERROR(" ... not found. Cannot operate without calibration, shutting down.\n");
         f.close();
         return 0;
     }
@@ -413,10 +413,6 @@ Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::str
             }
         }
     }
-
-
-
-
 
     // clean model selection implementation.
     else if(std::sscanf(l1.c_str(), "KannalaBrandt %f %f %f %f %f %f %f %f",
@@ -1028,8 +1024,8 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
 
     if(parsOrg[2] < 1 && parsOrg[3] < 1)
     {
-        LOG_INFO("\n\nFound fx=%f, fy=%f, cx=%f, cy=%f.\n I'm assuming this is the \"relative\" calibration file format,"
-                 "and will rescale this by image width / height to fx=%f, fy=%f, cx=%f, cy=%f.\n\n",
+        LOG_INFO("\nFound fx=%f, fy=%f, cx=%f, cy=%f.\n I'm assuming this is the \"relative\" calibration file format,"
+                 "and will rescale this by image width / height to fx=%f, fy=%f, cx=%f, cy=%f.\n",
                  parsOrg[0], parsOrg[1], parsOrg[2], parsOrg[3],
                  parsOrg[0] * wOrg, parsOrg[1] * hOrg, parsOrg[2] * wOrg - 0.5, parsOrg[3] * hOrg - 0.5 );
 

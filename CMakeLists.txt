@@ -223,7 +223,7 @@ set(dso_IO
     ${PROJECT_SOURCE_DIR}/src/IOWrapper/Output3DWrapper.hpp
     #${PROJECT_SOURCE_DIR}/src/IOWrapper/SampleOutputWrapper.hpp
 )
-source_group("IO" FILES ${dso_IO})
+source_group("IOWrapper" FILES ${dso_IO})
 
 # Sources files
 set(dso_SOURCE_FILES
@@ -236,9 +236,22 @@ set(dso_SOURCE_FILES
 
 set(dso_TESTS
   ${PROJECT_SOURCE_DIR}/tests/SampleTest.cpp
+  ${PROJECT_SOURCE_DIR}/tests/InputTests.cpp
+  ${PROJECT_SOURCE_DIR}/tests/OutputTests.cpp
 )
 source_group("tests" FILES ${dso_TESTS})
 
+set(INPUT_OUTPUT
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input.hpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input.cpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_mono_tum.cpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_rgbd_tum.cpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_stereo.cpp
+
+    #${PROJECT_SOURCE_DIR}/src/IOWrapper/Output.hpp
+    #${PROJECT_SOURCE_DIR}/src/IOWrapper/Output.cpp
+)
+source_group("IO" FILES ${INPUT_OUTPUT})
 
 include_directories(
   ${PROJECT_SOURCE_DIR}
@@ -261,17 +274,17 @@ SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 # Main Executable
-add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp ${dso_pangolin_SOURCE_FILES})
+add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp ${INPUT_OUTPUT} ${dso_pangolin_SOURCE_FILES})
 target_link_libraries(exe_DSO_SLAM ${DSO} ${ORB_SLAM} ${Pangolin_LIBRARIES} gflags)
 add_dependencies(exe_DSO_SLAM ${DSO} ${ORB_SLAM})
 
 # ORB Slam main
-add_executable(exe_ORB_SLAM ${PROJECT_SOURCE_DIR}/src/rgbd_tum.cpp)
+add_executable(exe_ORB_SLAM ${PROJECT_SOURCE_DIR}/src/rgbd_tum.cpp ${INPUT_OUTPUT})
 target_link_libraries(exe_ORB_SLAM ${ORB_SLAM} gflags)
 add_dependencies(exe_ORB_SLAM ${ORB_SLAM})
 
 # Tests
-add_executable(unit_DSO_SLAM ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${dso_TESTS})
+add_executable(unit_DSO_SLAM ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${INPUT_OUTPUT} ${dso_TESTS})
 target_link_libraries(unit_DSO_SLAM ${DSO} ${ORB_SLAM} gflags)
 add_dependencies(unit_DSO_SLAM ${DSO} ${ORB_SLAM})
 

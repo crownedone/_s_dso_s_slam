@@ -13,7 +13,7 @@ TEST_CASE("Sample Test case", "[Sample][Flag]")
 }
 
 
-TEST_CASE("Sample Test case", "[Sample][Flag]")
+TEST_CASE("Sample Test case2", "[Sample][Flag]")
 {
     //dso::FullSystem fs;
     REQUIRE(true);
