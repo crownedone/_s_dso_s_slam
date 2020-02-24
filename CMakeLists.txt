@@ -156,6 +156,8 @@ ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 DBoW2
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/bin/g2o.lib
+glog::glog
+Boost::system Boost::thread Boost::filesystem
 )
 
 

@@ -89,8 +89,9 @@ TEST_CASE("OpenCL Test", "[OpenCL][SimpleKernel]")
 
         cv::UMat src1 = input.getUMat(cv::ACCESS_READ);
         cv::UMat dst = output.getUMat(cv::ACCESS_WRITE);
-        int kw = input.cols;
-        int ow = output.cols;
+
+        int ow = input.cols;
+        int kw = output.cols;
         cv::ocl::KernelArg inputImage = cv::ocl::KernelArg::PtrReadOnly(src1);
         cv::ocl::KernelArg kWidth = cv::ocl::KernelArg::Constant(&kw, sizeof(int));
         cv::ocl::KernelArg oWidth = cv::ocl::KernelArg::Constant(&ow, sizeof(int));
@@ -101,7 +102,6 @@ TEST_CASE("OpenCL Test", "[OpenCL][SimpleKernel]")
         size_t globalsize[2] = { (size_t)output.cols, (size_t)output.rows };
         bool sync = true;
         k.run(2, globalsize, NULL, sync, q);
-        cv::ocl::finish();
 
         LOG_INFO("Kernel run: %f ms", sw.restart());
     }
