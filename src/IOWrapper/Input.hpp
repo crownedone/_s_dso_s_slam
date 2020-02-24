@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 
+#include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include <boost/signals2.hpp>
 
@@ -16,6 +17,8 @@ namespace IO
 
 struct FramePack
 {
+    FramePack() : timestamp(0.0), exposure(1.f) {};
+
     cv::Mat frame;
     cv::Mat frame_slave1;
     cv::Mat depthFrame;
@@ -86,6 +89,8 @@ public:
               bool looping = false);
 
     float* getPhotometricGamma();
+
+    void getCalibMono(Eigen::Matrix3f& K, int& w, int& h);
 
     virtual std::shared_ptr<const FramePack> nextFrame() override;
 

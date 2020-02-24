@@ -45,6 +45,9 @@ public:
         image = cv::Mat(h, w, CV_32FC1);
         exposure_time = 1;
     }
+    inline ImageAndExposure(cv::Mat img, double timestamp_ = 0, float exposure = 1.f) : image(img),
+        timestamp(timestamp_), exposure_time(exposure)
+    {}
 
     inline void copyMetaTo(ImageAndExposure& other)
     {

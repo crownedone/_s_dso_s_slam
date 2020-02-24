@@ -238,6 +238,7 @@ set(dso_TESTS
   ${PROJECT_SOURCE_DIR}/tests/SampleTest.cpp
   ${PROJECT_SOURCE_DIR}/tests/InputTests.cpp
   ${PROJECT_SOURCE_DIR}/tests/OutputTests.cpp
+  ${PROJECT_SOURCE_DIR}/tests/OpenCLTests.cpp
 )
 source_group("tests" FILES ${dso_TESTS})
 

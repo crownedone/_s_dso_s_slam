@@ -62,6 +62,19 @@ float* Mono_TUM::getPhotometricGamma()
     return undistort->photometricUndist->getG();
 }
 
+void Mono_TUM::getCalibMono(Eigen::Matrix3f& K, int& w, int& h)
+{
+    if (!undistort)
+    {
+        LOG_ERROR("Undistort not set!");
+        return;
+    }
+
+    K = undistort->getK().cast<float>();
+    w = undistort->getSize()[0];
+    h = undistort->getSize()[1];
+}
+
 bool Mono_TUM::loadTimestamps()
 {
     boost::filesystem::path timesFile = path + "/times.txt";
@@ -167,6 +180,7 @@ std::shared_ptr<const FramePack> Mono_TUM::nextFrame()
         res->exposure = ret2->exposure_time;
 
         count++;
+        delete ret2;
         return res;
     }
     else if (loop)
