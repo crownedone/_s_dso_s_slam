@@ -7,11 +7,6 @@
 #include <opencv2/core/core.hpp>
 #include <boost/signals2.hpp>
 
-namespace dso
-{
-class Undistort;
-}
-
 namespace IO
 {
 
@@ -88,10 +83,6 @@ public:
     bool open(const std::string& folder,
               bool looping = false);
 
-    float* getPhotometricGamma();
-
-    void getCalibMono(Eigen::Matrix3f& K, int& w, int& h);
-
     virtual std::shared_ptr<const FramePack> nextFrame() override;
 
 private:
@@ -104,8 +95,6 @@ private:
     std::string calibfile;
     std::string gamma;
     std::string vignette;
-
-    dso::Undistort* undistort;
 
     bool loadTimestamps();
 

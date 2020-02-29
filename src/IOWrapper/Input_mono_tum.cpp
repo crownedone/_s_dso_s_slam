@@ -4,10 +4,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#include "util/Undistort.hpp"
 #include <opencv2/imgcodecs.hpp>
-
-using namespace dso;
 
 namespace IO
 {
@@ -19,9 +16,6 @@ bool Mono_TUM::open(const std::string& path0, bool looping /*= false*/)
     CHECK_ARG_WITH_RET(boost::filesystem::exists(path) && boost::filesystem::is_directory(path), false);
 
     images = path + "/images";
-    calibfile = path + "/camera.txt";
-    gamma = path + "/pcalib.txt";
-    vignette = path + "/vignette.png";
 
     // no zip treatment
     //bool isZipped = (!boost::filesystem::exists(images) && boost::filesystem::exists(path / "images.zip"));
@@ -43,36 +37,11 @@ bool Mono_TUM::open(const std::string& path0, bool looping /*= false*/)
         LOG_INFO_1("%s \n", files[i].c_str());
     }
 
-    undistort = Undistort::getUndistorterForFile(calibfile, gamma, vignette);
-
     // load timestamps if possible.
     loadTimestamps();
     LOG_INFO("Input Mono_TUM: got %d files in %s!\n", (int)files.size(), images.c_str());
 
     return true;
-}
-
-float* Mono_TUM::getPhotometricGamma()
-{
-    if (undistort == 0 || undistort->photometricUndist == 0)
-    {
-        return 0;
-    }
-
-    return undistort->photometricUndist->getG();
-}
-
-void Mono_TUM::getCalibMono(Eigen::Matrix3f& K, int& w, int& h)
-{
-    if (!undistort)
-    {
-        LOG_ERROR("Undistort not set!");
-        return;
-    }
-
-    K = undistort->getK().cast<float>();
-    w = undistort->getSize()[0];
-    h = undistort->getSize()[1];
 }
 
 bool Mono_TUM::loadTimestamps()
@@ -169,18 +138,11 @@ std::shared_ptr<const FramePack> Mono_TUM::nextFrame()
     if (count < maxCnt)
     {
         cv::Mat minimg = cv::imread(files[count], cv::IMREAD_GRAYSCALE);
-
-        ImageAndExposure* ret2 = undistort->undistort<unsigned char>(
-                                     minimg,
-                                     (exposures.size() == 0 ? 1.0f : exposures[count]),
-                                     (timestamps.size() == 0 ? 0.0 : timestamps[count]));
-
-        res->frame = ret2->image;
-        res->timestamp = ret2->timestamp;
-        res->exposure = ret2->exposure_time;
+        res->frame = minimg;
+        res->timestamp = (timestamps.size() == 0 ? 0.0 : timestamps[count]);
+        res->exposure = (exposures.size() == 0 ? 1.0f : exposures[count]);
 
         count++;
-        delete ret2;
         return res;
     }
     else if (loop)

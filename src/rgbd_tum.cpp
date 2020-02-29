@@ -47,9 +47,6 @@ int main(int argc, char** argv)
     string seq = "C:/Users/steff/Desktop/ORB_SLAM2/Examples/RGB-D/rgbd_dataset_freiburg1_xyz";
     string ass = "C:/Users/steff/Desktop/ORB_SLAM2/Examples/RGB-D/associations/fr1_xyz.txt";
 
-
-
-
     // Retrieve paths to images
     vector<string> vstrImageFilenamesRGB;
     vector<string> vstrImageFilenamesD;

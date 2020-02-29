@@ -1004,6 +1004,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
             delete fh;
         }
 
+        LOG_INFO("Initialization: %f ", sw.restart());
         return;
     }
     else    // do front-end operation.
@@ -1019,6 +1020,8 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
 
         Vec4 tres = trackNewCoarse(fh);
+
+        LOG_INFO("Tracking: %f ", sw.restart());
 
         if(!std::isfinite((double)tres[0]) || !std::isfinite((double)tres[1]) ||
            !std::isfinite((double)tres[2]) || !std::isfinite((double)tres[3]))

@@ -72,8 +72,6 @@ TEST_CASE("OpenCL Test", "[OpenCL][SimpleKernel]")
     });
 
 
-
-
     StopWatch sw;
 
 

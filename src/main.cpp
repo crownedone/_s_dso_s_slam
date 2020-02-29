@@ -23,6 +23,8 @@
 
 
 #include "util/Input.hpp"
+#include "util/Undistort.hpp"
+
 #include <thread>
 #include <locale.h>
 #include <signal.h>
@@ -205,19 +207,37 @@ int main( int argc, char** argv )
     //ImageFolderReader* reader = new ImageFolderReader(FLAGS_sequenceFolder);
     //reader->setGlobalCalibration();
     IO::Mono_TUM input;
+    dso::Undistort* undistort;
+    float* photometricGamma = nullptr;
+
 
     if (!input.open(FLAGS_sequenceFolder))
     {
         LOG_ERROR("Cannot open!");
         exit(1);
     }
+    else
+    {
+        std::string path = FLAGS_sequenceFolder;
+        std::string calibfile = path + "/camera.txt";
+        std::string gamma = path + "/pcalib.txt";
+        std::string vignette = path + "/vignette.png";
+        undistort = Undistort::getUndistorterForFile(calibfile, gamma, vignette);
 
-    Eigen::Matrix3f K;
-    int w, h;
-    input.getCalibMono(K, w, h);
-    setGlobalCalib(w, h, K);
+        if (undistort)
+        {
+            photometricGamma = undistort->photometricUndist->getG();
 
-    if(setting_photometricCalibration > 0 && input.getPhotometricGamma() == 0)
+            Eigen::Matrix3f K = undistort->getK().cast<float>();
+            int w = undistort->getSize()[0];
+            int h = undistort->getSize()[1];
+            setGlobalCalib(w, h, K);
+        }
+    }
+
+
+
+    if(setting_photometricCalibration > 0 && photometricGamma == 0)
     {
         LOG_ERROR("dont't have photometric calibation. Need to use commandline options mode=1 or mode=2 ");
         exit(1);
@@ -242,7 +262,7 @@ int main( int argc, char** argv )
     //}
 
     FullSystem* fullSystem = new FullSystem();
-    fullSystem->setGammaFunction(input.getPhotometricGamma());
+    fullSystem->setGammaFunction(photometricGamma);
     fullSystem->linearizeOperation = (playbackSpeed == 0);
 
     IOWrap::PangolinDSOViewer* viewer = 0;
@@ -261,7 +281,8 @@ int main( int argc, char** argv )
     int id = 0;
     input.onFrame.connect([ =, &id ](std::shared_ptr<const IO::FramePack> frame)
     {
-        ImageAndExposure* img = new ImageAndExposure(frame->frame, frame->timestamp, frame->exposure);
+        ImageAndExposure* img = undistort->undistort<unsigned char>(
+                                    frame->frame, frame->exposure, frame->timestamp);
         fullSystem->addActiveFrame(img, id++);
         delete img;
     });
@@ -460,6 +481,7 @@ int main( int argc, char** argv )
 
     LOG_INFO("DELETE READER!\n");
     //delete reader;
+    delete undistort;
 
     LOG_INFO("EXIT NOW!\n");
     return 0;
