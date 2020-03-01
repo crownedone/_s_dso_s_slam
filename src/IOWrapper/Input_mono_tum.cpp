@@ -127,6 +127,7 @@ bool Mono_TUM::loadTimestamps()
 
     LOG_INFO("got %d images and %d timestamps and %d exposures.!\n", static_cast<int>(files.size()),
              (int)timestamps.size(), (int)exposures.size());
+    maxCnt = files.size();
     return true;
 
 }
@@ -137,11 +138,10 @@ std::shared_ptr<const FramePack> Mono_TUM::nextFrame()
 
     if (count < maxCnt)
     {
-        cv::Mat minimg = cv::imread(files[count], cv::IMREAD_GRAYSCALE);
-        res->frame = minimg;
+        res->frame = cv::imread(files[count], cv::IMREAD_GRAYSCALE);
         res->timestamp = (timestamps.size() == 0 ? 0.0 : timestamps[count]);
         res->exposure = (exposures.size() == 0 ? 1.0f : exposures[count]);
-
+        res->id = count;
         count++;
         return res;
     }

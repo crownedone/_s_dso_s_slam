@@ -18,6 +18,8 @@
     along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <StopWatch.hpp>
+#include <Logging.hpp>
 
 #include "Tracking.hpp"
 
@@ -232,6 +234,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat& imRectLeft, const cv::Mat& imRe
 
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat& imRGB, const cv::Mat& imD, const double& timestamp)
 {
+    StopWatch sw;
     mImGray = imRGB;
     cv::Mat imDepth = imD;
 
@@ -263,11 +266,12 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat& imRGB, const cv::Mat& imD, const 
         imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
     }
 
+    LOG_INFO("Color prep: %f", sw.restart());
     mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK,
                           mDistCoef, mbf, mThDepth);
-
+    LOG_INFO("ORB extr: %f", sw.restart());
     Track();
-
+    LOG_INFO("Tracking: %f", sw.restart());
     return mCurrentFrame.mTcw.clone();
 }
 

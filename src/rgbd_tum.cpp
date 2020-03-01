@@ -25,8 +25,9 @@
 #include <chrono>
 
 #include <opencv2/core/core.hpp>
-
-#include "src/ORB_SLAM2_System/System.hpp"
+#include <StopWatch.hpp>
+#include <Logging.hpp>
+#include <ORB_SLAM2_System/System.hpp>
 
 using namespace std;
 
@@ -42,10 +43,10 @@ int main(int argc, char** argv)
     //         endl;
     //    return 1;
     //}
-    string voc = "C:/Users/steff/Desktop/ORB_SLAM2/Examples/RGB-D/ORBvoc.txt";
-    string set = "C:/Users/steff/Desktop/ORB_SLAM2/Examples/RGB-D/TUM1.yaml";
-    string seq = "C:/Users/steff/Desktop/ORB_SLAM2/Examples/RGB-D/rgbd_dataset_freiburg1_xyz";
-    string ass = "C:/Users/steff/Desktop/ORB_SLAM2/Examples/RGB-D/associations/fr1_xyz.txt";
+    string voc = "C:/Users/steff/Desktop/orb_seq/ORBvoc.txt";
+    string set = "C:/Users/steff/Desktop/orb_seq/TUM1.yaml";
+    string seq = "C:/Users/steff/Desktop/orb_seq/rgbd_dataset_freiburg1_xyz";
+    string ass = "C:/Users/steff/Desktop/orb_seq/associations/fr1_xyz.txt";
 
     // Retrieve paths to images
     vector<string> vstrImageFilenamesRGB;
@@ -100,10 +101,8 @@ int main(int argc, char** argv)
         }
 
         std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-
         // Pass the image to the SLAM system
         SLAM.TrackRGBD(imRGB, imD, tframe);
-
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 
 

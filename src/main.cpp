@@ -190,6 +190,7 @@ int main( int argc, char** argv )
     LOG_INFO("Starting DSO:");
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
+    FLAGS_sequenceFolder = "C:/Users/steff/Desktop/dso_seq";
 
     // Only valid with sequence:
     if (FLAGS_sequenceFolder.empty())
@@ -283,7 +284,7 @@ int main( int argc, char** argv )
     {
         ImageAndExposure* img = undistort->undistort<unsigned char>(
                                     frame->frame, frame->exposure, frame->timestamp);
-        fullSystem->addActiveFrame(img, id++);
+        fullSystem->addActiveFrame(img, frame->id);
         delete img;
     });
 

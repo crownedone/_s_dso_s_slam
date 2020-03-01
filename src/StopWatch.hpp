@@ -1,9 +1,6 @@
 // From http://www.linuxjournal.com/article/5574
 #pragma once
 
-#ifndef _TIMES_H
-#define _TIMES_H
-
 #ifdef _WIN32
     #include <stdint.h>
     #include <sys/timeb.h>
@@ -39,5 +36,3 @@ public:
     /// Restarts timer and returns time until now.
     double restart();
 };
-
-#endif

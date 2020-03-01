@@ -20,6 +20,7 @@ struct FramePack
 
     double timestamp;
     float exposure;
+    int id;
 };
 
 class Input

@@ -68,6 +68,25 @@ endif ()
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
+#cross project files
+set(SYS
+    ${PROJECT_SOURCE_DIR}/src/StopWatch.cpp
+    ${PROJECT_SOURCE_DIR}/src/StopWatch.hpp
+    ${PROJECT_SOURCE_DIR}/src/Logging.hpp
+) 
+source_group("sys" FILES ${SYS})
+set(INPUT_OUTPUT
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input.hpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input.cpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_mono_tum.cpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_rgbd_tum.cpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_stereo.cpp
+
+    #${PROJECT_SOURCE_DIR}/src/IOWrapper/Output.hpp
+    #${PROJECT_SOURCE_DIR}/src/IOWrapper/Output.cpp
+)
+source_group("IO" FILES ${INPUT_OUTPUT})
+
 # DBow2 library:
 set(HDRS_DBOW2
   src/DBoW2/BowVector.h
@@ -102,50 +121,48 @@ ${EIGEN3_INCLUDE_DIR}
 ${Pangolin_INCLUDE_DIRS}
 )
 
-set(ORB_SLAM_HDRS 
-src/ORB_SLAM2_System/System.hpp
-src/ORB_SLAM2_System/Tracking.hpp
-src/ORB_SLAM2_System/LocalMapping.hpp
-src/ORB_SLAM2_System/LoopClosing.hpp
-src/ORB_SLAM2_System/ORBextractor.hpp
-src/ORB_SLAM2_System/ORBmatcher.hpp
-src/ORB_SLAM2_System/FrameDrawer.hpp
-src/ORB_SLAM2_System/Converter.hpp
-src/ORB_SLAM2_System/MapPoint.hpp
-src/ORB_SLAM2_System/KeyFrame.hpp
-src/ORB_SLAM2_System/Map.hpp
-src/ORB_SLAM2_System/MapDrawer.hpp
-src/ORB_SLAM2_System/Optimizer.hpp
-src/ORB_SLAM2_System/PnPsolver.hpp
-src/ORB_SLAM2_System/Frame.hpp
-src/ORB_SLAM2_System/KeyFrameDatabase.hpp
-src/ORB_SLAM2_System/Sim3Solver.hpp
-src/ORB_SLAM2_System/Initializer.hpp
-src/ORB_SLAM2_System/Viewer.hpp
-)
-source_group(ORB_SLAM2_Headers ${ORB_SLAM_HDRS})
 set(ORB_SLAM_SRC 
+${SYS}
+src/ORB_SLAM2_System/System.hpp
 src/ORB_SLAM2_System/System.cpp
+src/ORB_SLAM2_System/Tracking.hpp
 src/ORB_SLAM2_System/Tracking.cpp
+src/ORB_SLAM2_System/LocalMapping.hpp
 src/ORB_SLAM2_System/LocalMapping.cpp
+src/ORB_SLAM2_System/LoopClosing.hpp
 src/ORB_SLAM2_System/LoopClosing.cpp
+src/ORB_SLAM2_System/ORBextractor.hpp
 src/ORB_SLAM2_System/ORBextractor.cpp
+src/ORB_SLAM2_System/ORBmatcher.hpp
 src/ORB_SLAM2_System/ORBmatcher.cpp
+src/ORB_SLAM2_System/FrameDrawer.hpp
 src/ORB_SLAM2_System/FrameDrawer.cpp
+src/ORB_SLAM2_System/Converter.hpp
 src/ORB_SLAM2_System/Converter.cpp
+src/ORB_SLAM2_System/MapPoint.hpp
 src/ORB_SLAM2_System/MapPoint.cpp
+src/ORB_SLAM2_System/KeyFrame.hpp
 src/ORB_SLAM2_System/KeyFrame.cpp
+src/ORB_SLAM2_System/Map.hpp
 src/ORB_SLAM2_System/Map.cpp
+src/ORB_SLAM2_System/MapDrawer.hpp
 src/ORB_SLAM2_System/MapDrawer.cpp
+src/ORB_SLAM2_System/Optimizer.hpp
 src/ORB_SLAM2_System/Optimizer.cpp
+src/ORB_SLAM2_System/PnPsolver.hpp
 src/ORB_SLAM2_System/PnPsolver.cpp
+src/ORB_SLAM2_System/Frame.hpp
 src/ORB_SLAM2_System/Frame.cpp
+src/ORB_SLAM2_System/KeyFrameDatabase.hpp
 src/ORB_SLAM2_System/KeyFrameDatabase.cpp
+src/ORB_SLAM2_System/Sim3Solver.hpp
 src/ORB_SLAM2_System/Sim3Solver.cpp
+src/ORB_SLAM2_System/Initializer.hpp
 src/ORB_SLAM2_System/Initializer.cpp
+src/ORB_SLAM2_System/Viewer.hpp
 src/ORB_SLAM2_System/Viewer.cpp
 )
-source_group(ORB_SLAM2_Sources ${ORB_SLAM_SRC})
+source_group("System" FILES ${ORB_SLAM_SRC})
 
 add_library(${ORB_SLAM} SHARED ${ORB_SLAM_SRC})
 add_dependencies(${ORB_SLAM} DBoW2)
@@ -169,7 +186,6 @@ set(dso_UTIL
     ${PROJECT_SOURCE_DIR}/src/util/globalCalib.cpp
     ${PROJECT_SOURCE_DIR}/src/util/globalCalib.hpp
     ${PROJECT_SOURCE_DIR}/src/util/DatasetReader.hpp
-    ${PROJECT_SOURCE_DIR}/src/util/Input.hpp
     ${PROJECT_SOURCE_DIR}/src/util/FrameShell.hpp
     ${PROJECT_SOURCE_DIR}/src/util/NumType.hpp
     ${PROJECT_SOURCE_DIR}/src/util/nanoflann.hpp
@@ -178,12 +194,6 @@ set(dso_UTIL
     ${PROJECT_SOURCE_DIR}/src/util/globalFuncs.hpp
 ) 
 source_group("util" FILES ${dso_UTIL})
-set(dso_SYS
-    ${PROJECT_SOURCE_DIR}/src/StopWatch.cpp
-    ${PROJECT_SOURCE_DIR}/src/StopWatch.hpp
-    ${PROJECT_SOURCE_DIR}/src/Logging.hpp
-) 
-source_group("sys" FILES ${dso_SYS})
 set(dso_FULLSYSTEM
     ${PROJECT_SOURCE_DIR}/src/DSO_System/FullSystem.cpp
     ${PROJECT_SOURCE_DIR}/src/DSO_System/FullSystem.hpp
@@ -229,6 +239,7 @@ source_group("IOWrapper" FILES ${dso_IO})
 
 # Sources files
 set(dso_SOURCE_FILES
+  ${SYS}
   ${dso_UTIL}
   ${dso_OPTBACK}
   ${dso_FULLSYSTEM}
@@ -243,18 +254,6 @@ set(dso_TESTS
   ${PROJECT_SOURCE_DIR}/tests/OpenCLTests.cpp
 )
 source_group("tests" FILES ${dso_TESTS})
-
-set(INPUT_OUTPUT
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input.hpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input.cpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_mono_tum.cpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_rgbd_tum.cpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_stereo.cpp
-
-    #${PROJECT_SOURCE_DIR}/src/IOWrapper/Output.hpp
-    #${PROJECT_SOURCE_DIR}/src/IOWrapper/Output.cpp
-)
-source_group("IO" FILES ${INPUT_OUTPUT})
 
 include_directories(
   ${PROJECT_SOURCE_DIR}
