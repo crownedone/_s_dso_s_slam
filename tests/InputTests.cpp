@@ -40,8 +40,6 @@ TEST_CASE("Input test DSO", "[Input][Mono_Tum]")
 
     int validFramesSinceStart = 0;
 
-    REQUIRE(input.getPhotometricGamma() != nullptr);
-
     input.onFrame.connect([ =, &validFramesSinceStart](std::shared_ptr<const IO::FramePack> in)
     {
         if (!in->frame.empty() && in->exposure != 0.f && in->timestamp != 0)

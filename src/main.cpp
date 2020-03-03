@@ -190,8 +190,6 @@ int main( int argc, char** argv )
     LOG_INFO("Starting DSO:");
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-    FLAGS_sequenceFolder = "C:/Users/steff/Desktop/dso_seq";
-
     // Only valid with sequence:
     if (FLAGS_sequenceFolder.empty())
     {
@@ -205,8 +203,6 @@ int main( int argc, char** argv )
 
     settingsDefault(FLAGS_preset);
 
-    //ImageFolderReader* reader = new ImageFolderReader(FLAGS_sequenceFolder);
-    //reader->setGlobalCalibration();
     IO::Mono_TUM input;
     dso::Undistort* undistort;
     float* photometricGamma = nullptr;
@@ -280,194 +276,55 @@ int main( int argc, char** argv )
     }
 
     int id = 0;
-    input.onFrame.connect([ =, &id ](std::shared_ptr<const IO::FramePack> frame)
+    input.onFrame.connect([ =, &id, &fullSystem ](std::shared_ptr<const IO::FramePack> frame)
     {
+        if (fullSystem->initFailed || setting_fullResetRequested)
+        {
+            if(id < 250 || setting_fullResetRequested)
+            {
+                LOG_WARNING("RESETTING!\n");
+
+                std::vector<IOWrap::Output3DWrapper*> wraps = fullSystem->outputWrapper;
+                delete fullSystem;
+
+                for(IOWrap::Output3DWrapper* ow : wraps)
+                {
+                    ow->reset();
+                }
+
+                fullSystem = new FullSystem();
+                fullSystem->setGammaFunction(photometricGamma);
+                fullSystem->linearizeOperation = (playbackSpeed == 0);
+
+
+                fullSystem->outputWrapper = wraps;
+
+                setting_fullResetRequested = false;
+            }
+        }
+
+        if (fullSystem->isLost)
+        {
+            LOG_ERROR("Tracking lost!");
+            return;
+        }
+
         ImageAndExposure* img = undistort->undistort<unsigned char>(
                                     frame->frame, frame->exposure, frame->timestamp);
         fullSystem->addActiveFrame(img, frame->id);
         delete img;
     });
 
-    //while (!fullSystem->initialized)
-    //{
-    //}
-
     input.playback();
 
-    // to make MacOS happy: run this in dedicated thread -- and use this one to run the GUI.
-    //std::thread runthread([&]()
-    //{
-    //    std::vector<int> idsToPlay;
-    //    std::vector<double> timesToPlayAt;
-
-    //    for(int i = lstart; i >= 0 && i < reader->getNumImages() && linc * i < linc * lend; i += linc)
-    //    {
-    //        idsToPlay.push_back(i);
-
-    //        if(timesToPlayAt.size() == 0)
-    //        {
-    //            timesToPlayAt.push_back((double)0);
-    //        }
-    //        else
-    //        {
-    //            double tsThis = reader->getTimestamp(idsToPlay[idsToPlay.size() - 1]);
-    //            double tsPrev = reader->getTimestamp(idsToPlay[idsToPlay.size() - 2]);
-    //            timesToPlayAt.push_back(timesToPlayAt.back() +  fabs(tsThis - tsPrev) / playbackSpeed);
-    //        }
-    //    }
-
-
-    //    std::vector<ImageAndExposure*> preloadedImages;
-
-    //    if(preload)
-    //    {
-    //        LOG_INFO("LOADING ALL IMAGES!\n");
-
-    //        for(int ii = 0; ii < (int)idsToPlay.size(); ii++)
-    //        {
-    //            int i = idsToPlay[ii];
-    //            preloadedImages.push_back(reader->getImage(i));
-    //        }
-    //    }
-
-    //    StopWatch tv_start;
-
-    //    clock_t started = clock();
-
-    //    double sInitializerOffset = 0;
-
-    //    StopWatch sw;
-
-    //    for(int ii = 0; ii < (int)idsToPlay.size(); ii++)
-    //    {
-    //        if(!fullSystem->initialized)    // if not initialized: reset start time.
-    //        {
-    //            tv_start.restart();
-    //            started = clock();
-    //            sInitializerOffset = timesToPlayAt[ii];
-    //        }
-
-    //        int i = idsToPlay[ii];
-
-
-    //        ImageAndExposure* img;
-
-    //        if(preload)
-    //        {
-    //            img = preloadedImages[ii];
-    //        }
-    //        else
-    //        {
-    //            img = reader->getImage(i);
-    //        }
-
-    //        bool skipFrame = false;
-
-    //        if(playbackSpeed != 0)
-    //        {
-    //            double sSinceStart = tv_start.stop() / 1000;
-
-    //            if(sSinceStart < timesToPlayAt[ii])
-    //            {
-    //                std::this_thread::sleep_for(std::chrono::microseconds((int)((timesToPlayAt[ii] - sSinceStart) *
-    //                                            1000 * 1000)));
-    //            }
-    //            else if(sSinceStart > timesToPlayAt[ii] + 0.5 + 0.1 * (ii % 2))
-    //            {
-    //                LOG_INFO("SKIPFRAME %d (play at %f, now it is %f)!\n", ii, timesToPlayAt[ii], sSinceStart);
-    //                skipFrame = true;
-    //            }
-    //        }
-
-    //        if(!skipFrame)
-    //        {
-    //            fullSystem->addActiveFrame(img, i);
-    //        }
-
-    //        delete img;
-
-    //        if(fullSystem->initFailed || setting_fullResetRequested)
-    //        {
-    //            if(ii < 250 || setting_fullResetRequested)
-    //            {
-    //                LOG_INFO("RESETTING!\n");
-
-    //                std::vector<IOWrap::Output3DWrapper*> wraps = fullSystem->outputWrapper;
-    //                delete fullSystem;
-
-    //                for(IOWrap::Output3DWrapper* ow : wraps)
-    //                {
-    //                    ow->reset();
-    //                }
-
-    //                fullSystem = new FullSystem();
-    //                fullSystem->setGammaFunction(reader->getPhotometricGamma());
-    //                fullSystem->linearizeOperation = (playbackSpeed == 0);
-
-
-    //                fullSystem->outputWrapper = wraps;
-
-    //                setting_fullResetRequested = false;
-    //            }
-    //        }
-
-    //        if(fullSystem->isLost)
-    //        {
-    //            LOG_INFO("LOST!!\n");
-    //            break;
-    //        }
-
-    //        LOG_WARNING("Cycle: %f [ms]", sw.restart());
-    //    }
-
-    //    fullSystem->blockUntilMappingIsFinished();
-    //    clock_t ended = clock();
-
-
-    //    fullSystem->printResult("result.txt");
-
-
-    //    int numFramesProcessed = abs(idsToPlay[0] - idsToPlay.back());
-    //    double numSecondsProcessed = fabs(reader->getTimestamp(idsToPlay[0]) - reader->getTimestamp(
-    //                                          idsToPlay.back()));
-    //    double MilliSecondsTakenSingle = 1000.0f * (ended - started) / (float)(CLOCKS_PER_SEC);
-    //    double MilliSecondsTakenMT = tv_start.stop();
-
-    //    LOG_INFO("\n======================"
-    //             "\n%d Frames (%.1f fps)"
-    //             "\n%.2fms per frame (single core); "
-    //             "\n%.2fms per frame (multi core); "
-    //             "\n%.3fx (single core); "
-    //             "\n%.3fx (multi core); "
-    //             "\n======================\n\n",
-    //             numFramesProcessed, numFramesProcessed / numSecondsProcessed,
-    //             MilliSecondsTakenSingle / numFramesProcessed,
-    //             MilliSecondsTakenMT / (float)numFramesProcessed,
-    //             1000 / (MilliSecondsTakenSingle / numSecondsProcessed),
-    //             1000 / (MilliSecondsTakenMT / numSecondsProcessed));
-
-    //    //fullSystem->printFrameLifetimes();
-    //    if(setting_logStuff)
-    //    {
-    //        std::ofstream tmlog;
-    //        tmlog.open("logs/time.txt", std::ios::trunc | std::ios::out);
-    //        tmlog << 1000.0f * (ended - started) / (float)(CLOCKS_PER_SEC * reader->getNumImages()) << " "
-    //              << MilliSecondsTakenMT /
-    //              (float)reader->getNumImages() << "\n";
-    //        tmlog.flush();
-    //        tmlog.close();
-    //    }
-
-    //});
-
+    fullSystem->blockUntilMappingIsFinished();
+    fullSystem->printResult("result.txt");
+    fullSystem->printFrameLifetimes();
 
     if(viewer != 0)
     {
         viewer->run();
     }
-
-    fullSystem->blockUntilMappingIsFinished();
-    fullSystem->printResult("result.txt");
 
     for(IOWrap::Output3DWrapper* ow : fullSystem->outputWrapper)
     {
@@ -475,13 +332,10 @@ int main( int argc, char** argv )
         delete ow;
     }
 
-
-
     LOG_INFO("DELETE FULLSYSTEM!\n");
     delete fullSystem;
 
     LOG_INFO("DELETE READER!\n");
-    //delete reader;
     delete undistort;
 
     LOG_INFO("EXIT NOW!\n");
