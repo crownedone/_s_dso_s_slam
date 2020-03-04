@@ -8,5 +8,7 @@
 /thirdparty/Pangolin
 /.vs
 /CMakeSettings.json
-/bin/
+/bin/Release
+/bin/Debug
+/bin/RelWithDebInfo
 /build
