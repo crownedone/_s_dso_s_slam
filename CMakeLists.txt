@@ -311,10 +311,10 @@ add_custom_command(TARGET exe_DSO_SLAM POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different 
     ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/zlib1.dll
     $<TARGET_FILE_DIR:exe_DSO_SLAM>)
-add_custom_command(TARGET exe_DSO_SLAM POST_BUILD 
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/gflags.dll
-    $<TARGET_FILE_DIR:exe_DSO_SLAM>/gflags_debug.dll)
+#add_custom_command(TARGET exe_DSO_SLAM POST_BUILD 
+#    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+#    ${_VCPKG_INSTALLED_DIR}/x64-windows/bin/gflags.dll
+#    $<TARGET_FILE_DIR:exe_DSO_SLAM>/gflags_debug.dll)
 add_custom_command(TARGET exe_DSO_SLAM POST_BUILD 
     COMMAND ${CMAKE_COMMAND} -E copy_directory 
     ${CMAKE_SOURCE_DIR}/thirdparty/g2o/bin

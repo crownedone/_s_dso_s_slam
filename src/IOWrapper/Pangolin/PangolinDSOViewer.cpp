@@ -47,6 +47,7 @@ PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread)
     {
         boost::unique_lock<boost::mutex> lk(openImagesMutex);
         internalVideoImg = cv::Mat(h, w, CV_8UC3, cv::Scalar::all(0));
+        internalVideoImg_Right = cv::Mat(h, w, CV_8UC3, cv::Scalar::all(0));
         internalKFImg = cv::Mat(h, w, CV_8UC3, cv::Scalar::all(0));
         internalResImg = cv::Mat(h, w, CV_8UC3, cv::Scalar::all(0));
         videoImgChanged = kfImgChanged = resImgChanged = true;
@@ -95,10 +96,12 @@ void PangolinDSOViewer::run()
                                               .SetHandler(new pangolin::Handler3D(Visualization3D_camera));
 
 
-    // 3 images
+    // 4 images
     pangolin::View& d_kfDepth = pangolin::Display("imgKFDepth")
                                 .SetAspect(w / (float)h);
 
+    pangolin::View& d_video_Right = pangolin::Display("imgKFDepth_Right")
+                                    .SetAspect(w / (float)h);
     pangolin::View& d_video = pangolin::Display("imgVideo")
                               .SetAspect(w / (float)h);
 
@@ -107,6 +110,7 @@ void PangolinDSOViewer::run()
 
     pangolin::GlTexture texKFDepth(w, h, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
     pangolin::GlTexture texVideo(w, h, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
+    pangolin::GlTexture texVideo_Right(w, h, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
     pangolin::GlTexture texResidual(w, h, GL_RGB, false, 0, GL_RGB, GL_UNSIGNED_BYTE);
 
 
@@ -115,6 +119,7 @@ void PangolinDSOViewer::run()
     .SetLayout(pangolin::LayoutEqual)
     .AddDisplay(d_kfDepth)
     .AddDisplay(d_video)
+    .AddDisplay(d_video_Right)
     .AddDisplay(d_residual);
 
     // parameter reconfigure gui
@@ -133,7 +138,7 @@ void PangolinDSOViewer::run()
     pangolin::Var<bool> settings_show3D("ui.show3D", true, true);
     pangolin::Var<bool> settings_showLiveDepth("ui.showDepth", true, true);
     pangolin::Var<bool> settings_showLiveVideo("ui.showVideo", true, true);
-    pangolin::Var<bool> settings_showLiveResidual("ui.showResidual", false, true);
+    pangolin::Var<bool> settings_showLiveResidual("ui.showResidual", true, true);
 
     pangolin::Var<bool> settings_showFramesWindow("ui.showFramesWindow", false, true);
     pangolin::Var<bool> settings_showFullTracking("ui.showFullTracking", false, true);
@@ -203,10 +208,10 @@ void PangolinDSOViewer::run()
 
         openImagesMutex.lock();
 
-        if(videoImgChanged)
+        if (videoImgChanged)
         {
-            texVideo.Upload(reinterpret_cast<const void*>(internalVideoImg.data), GL_BGR,
-                            GL_UNSIGNED_BYTE);
+            texVideo.Upload(reinterpret_cast<const void*>(internalVideoImg.data), GL_BGR, GL_UNSIGNED_BYTE);
+            texVideo_Right.Upload(reinterpret_cast<const void*>(internalVideoImg_Right.data), GL_BGR, GL_UNSIGNED_BYTE);
         }
 
         if(kfImgChanged)
@@ -259,6 +264,11 @@ void PangolinDSOViewer::run()
             d_video.Activate();
             glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
             texVideo.RenderToViewportFlipY();
+
+
+            d_video_Right.Activate();
+            glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+            texVideo_Right.RenderToViewportFlipY();
         }
 
         if(setting_render_displayDepth)
@@ -367,6 +377,7 @@ void PangolinDSOViewer::reset_internal()
 
     openImagesMutex.lock();
     internalVideoImg.setTo(cv::Scalar::all(0));
+    internalVideoImg_Right.setTo(cv::Scalar::all(0));
     internalKFImg.setTo(cv::Scalar::all(0));
     internalResImg.setTo(cv::Scalar::all(0));
     videoImgChanged = kfImgChanged = resImgChanged = true;
@@ -478,9 +489,7 @@ void PangolinDSOViewer::drawConstraints()
 
 
 
-void PangolinDSOViewer::publishGraph(const
-                                     std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>>&
-                                     connectivity)
+void PangolinDSOViewer::publishGraph(const std::map<long, Eigen::Vector2i>& connectivity)
 {
     if(!setting_render_display3D)
     {
@@ -493,7 +502,7 @@ void PangolinDSOViewer::publishGraph(const
     }
 
     model3DMutex.lock();
-    connections.resize(connectivity.size());
+    connections.resize(connectivity.size() / 2);
     int runningID = 0;
     int totalActFwd = 0, totalActBwd = 0, totalMargFwd = 0, totalMargBwd = 0;
 
@@ -537,7 +546,7 @@ void PangolinDSOViewer::publishGraph(const
         }
     }
 
-
+    connections.resize(runningID);
     model3DMutex.unlock();
 }
 void PangolinDSOViewer::publishKeyframes(
@@ -615,13 +624,50 @@ void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
 
     boost::unique_lock<boost::mutex> lk(openImagesMutex);
 
-    for(int i = 0; i < w * h; i++)
+    for (int i = 0; i < w * h; i++)
+    {
         reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
             reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
                 reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
-                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.0 :
-                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8;
+                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.f :
+                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8f;
 
+        reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][0] =
+            reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][1] =
+                reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][2] = 255.0f;
+    }
+
+    videoImgChanged = true;
+}
+
+void PangolinDSOViewer::pushStereoLiveFrame(FrameHessian* image, FrameHessian* image_right)
+{
+    if (!setting_render_displayVideo)
+    {
+        return;
+    }
+
+    if (disableAllDisplay)
+    {
+        return;
+    }
+
+    boost::unique_lock<boost::mutex> lk(openImagesMutex);
+
+    for (int i = 0; i < w * h; i++)
+    {
+        reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
+            reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
+                reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
+                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.f :
+                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8f;
+
+        reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][0] =
+            reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][1] =
+                reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][2] =
+                    image_right->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.f :
+                    image_right->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8f;
+    }
 
     videoImgChanged = true;
 }

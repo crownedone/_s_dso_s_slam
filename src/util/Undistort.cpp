@@ -961,12 +961,13 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
     std::ifstream infile(configFileName);
     assert(infile.good());
 
-    std::string l1, l2, l3, l4;
+    std::string l1, l2, l3, l4, l5;
 
     std::getline(infile, l1);
     std::getline(infile, l2);
     std::getline(infile, l3);
     std::getline(infile, l4);
+    std::getline(infile, l5);
 
     // l1 & l2
     if(nPars == 5) // fov model
@@ -1103,6 +1104,16 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
     {
         LOG_INFO("Out: Failed to Read Output resolution... not rectifying.\n");
         valid = false;
+    }
+
+    if (std::sscanf(l5.c_str(), "%f", &bl) == 1)
+    {
+        LOG_INFO("Baseline: %f \n", bl);
+    }
+    else
+    {
+        LOG_ERROR("Out: Failed to Read Baseline... can not do stereo. \n");
+        bl = 0.f;
     }
 
     remapX = new float[w * h];

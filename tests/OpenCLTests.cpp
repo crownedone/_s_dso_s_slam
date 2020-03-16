@@ -29,10 +29,10 @@ TEST_CASE("OpenCL Test", "[OpenCL][SimpleKernel]")
 
     std::string kernelBinning =
         "__kernel void Binning(										\
-		__global const uchar* restrict inputImage,					\
-		const int kwidth,											\
-		__global       float* restrict outputImage,					\
-		const int inputWidth)										\
+        __global const uchar* restrict inputImage,					\
+        const int kwidth,											\
+        __global       float* restrict outputImage,					\
+        const int inputWidth)										\
         {																	\
         uint u_out = get_global_id(0);										\
         uint v_out = get_global_id(1);										\

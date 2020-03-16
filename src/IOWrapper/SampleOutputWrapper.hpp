@@ -53,9 +53,7 @@ public:
         printf("OUT: Destroyed SampleOutputWrapper\n");
     }
 
-    virtual void publishGraph(const
-                              std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>>&
-                              connectivity) override
+    virtual void publishGraph(const std::map<long, Eigen::Vector2i>& connectivity) override
     {
         printf("OUT: got graph with %d edges\n", (int)connectivity.size());
 

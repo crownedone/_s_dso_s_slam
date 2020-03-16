@@ -83,9 +83,9 @@ public:
     CoarseInitializer(int w, int h);
     ~CoarseInitializer();
 
-
-    void setFirst(  CalibHessian* HCalib, FrameHessian* newFrameHessian);
-    bool trackFrame(FrameHessian* newFrameHessian, std::vector<IOWrap::Output3DWrapper*>& wraps);
+    void setFirst(CalibHessian* HCalib, FrameHessian* newFrameHessian);
+    void setFirstStereo(CalibHessian* HCalib, FrameHessian* newFrameHessian, FrameHessian* newFrameHessian_Right);
+    bool trackFrame(FrameHessian* newFrameHessian, FrameHessian* newFrameHessian_Right, std::vector<IOWrap::Output3DWrapper*>& wraps);
     void calcTGrads(FrameHessian* newFrameHessian);
 
     int frameID;
@@ -100,6 +100,8 @@ public:
 
     FrameHessian* firstFrame;
     FrameHessian* newFrame;
+
+    FrameHessian* firstRightFrame;
 private:
     Mat33 K[PYR_LEVELS];
     Mat33 Ki[PYR_LEVELS];
@@ -114,6 +116,8 @@ private:
     int w[PYR_LEVELS];
     int h[PYR_LEVELS];
     void makeK(CalibHessian* HCalib);
+    float* idepth[PYR_LEVELS];
+
 
     bool snapped;
     int snappedAt;

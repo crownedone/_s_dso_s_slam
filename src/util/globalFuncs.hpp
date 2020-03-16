@@ -29,11 +29,38 @@
 #include "IOWrapper/ImageDisplay.hpp"
 #include "fstream"
 #include <opencv2/core/matx.hpp>
+#include <cmath>
+#include <opencv2/highgui/highgui.hpp>
 
 namespace dso
 {
 
 
+EIGEN_ALWAYS_INLINE float getMatInterpolatedElement11BiLin(const cv::Mat mat, const float x, const float y)
+{
+
+    int ix = (int)x;
+    int iy = (int)y;
+    int w = mat.cols;
+    const cv::Vec3b* ptr0 = mat.ptr<const cv::Vec3b>(iy);
+    const cv::Vec3b* ptr1 = mat.ptr<const cv::Vec3b>(iy + 1);
+
+    float tl = (float) static_cast<uchar>(ptr0[ix][0]);
+    float tr = (float) static_cast<uchar>(ptr0[ix + 1][0]);
+    float bl = (float) static_cast<uchar>(ptr1[ix][0]);
+    float br = (float) static_cast<uchar>(ptr1[ix + 1][0]);
+
+    float dx = x - ix;
+    float dy = y - iy;
+
+    float topInt = dx * tr + (1 - dx) * tl;
+    float botInt = dx * br + (1 - dx) * bl;
+    float leftInt = dy * bl + (1 - dy) * tl;
+    float rightInt = dy * br + (1 - dy) * tr;
+
+    float value = dx * rightInt + (1 - dx) * leftInt;
+    return value;
+}
 
 // reads interpolated element from a uchar* array
 // SSE2 optimization possible

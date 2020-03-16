@@ -147,6 +147,12 @@ void settingsDefault(int preset)
         setting_maxOptIterations = 6;
         setting_minOptIterations = 1;
 
+        // original is 1.0. 0.3 is a balance between speed and accuracy. if tracking lost, set this para higher
+        setting_kfGlobalWeight = 0.3;
+        setting_maxShiftWeightT = 0.04f * (640 + 128);   // original is 0.04f * (640+480); this para is depend on the crop size.
+        setting_maxShiftWeightR = 0.04f * (640 + 128);    // original is 0.0f * (640+480);
+        setting_maxShiftWeightRT = 0.02f * (640 + 128);  // original is 0.02f * (640+480);
+
         setting_logStuff = false;
     }
 
@@ -229,6 +235,8 @@ int main( int argc, char** argv )
             int w = undistort->getSize()[0];
             int h = undistort->getSize()[1];
             setGlobalCalib(w, h, K);
+            // Set baseline for stereo (if available)
+            baseline = undistort->getBl();
         }
     }
 
@@ -242,21 +250,6 @@ int main( int argc, char** argv )
 
     int lstart = start;
     int lend = end;
-    int linc = 1;
-
-    //if(reverse)
-    //{
-    //    LOG_INFO("REVERSE!!!!");
-    //    lstart = end - 1;
-    //
-    //    if(lstart >= reader->getNumImages())
-    //    {
-    //        lstart = reader->getNumImages() - 1;
-    //    }
-    //
-    //    lend = start;
-    //    linc = -1;
-    //}
 
     FullSystem* fullSystem = new FullSystem();
     fullSystem->setGammaFunction(photometricGamma);
@@ -276,18 +269,18 @@ int main( int argc, char** argv )
     }
 
     int id = 0;
-    input.onFrame.connect([ =, &id, &fullSystem ](std::shared_ptr<const IO::FramePack> frame)
+    input.onFrame.connect([ =, &id, &fullSystem](std::shared_ptr<const IO::FramePack> frame)
     {
         if (fullSystem->initFailed || setting_fullResetRequested)
         {
-            if(id < 250 || setting_fullResetRequested)
+            if (id < 250 || setting_fullResetRequested)
             {
                 LOG_WARNING("RESETTING!\n");
 
                 std::vector<IOWrap::Output3DWrapper*> wraps = fullSystem->outputWrapper;
                 delete fullSystem;
 
-                for(IOWrap::Output3DWrapper* ow : wraps)
+                for (IOWrap::Output3DWrapper* ow : wraps)
                 {
                     ow->reset();
                 }
@@ -311,20 +304,39 @@ int main( int argc, char** argv )
 
         ImageAndExposure* img = undistort->undistort<unsigned char>(
                                     frame->frame, frame->exposure, frame->timestamp);
-        fullSystem->addActiveFrame(img, frame->id);
+
+        if (false)// FLAGS_stereomatch)
+        {
+            std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+
+            //cv::Mat idepthMap(img->h, img_right->w, CV_32FC3, cv::Scalar(0, 0, 0));
+            //cv::Mat& idepth_temp = idepthMap;
+            //fullSystem->stereoMatch(img_left, img_right, i, idepth_temp);
+
+            std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+            double ttStereoMatch = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0).count();
+            LOG_INFO(" casting time %f s", ttStereoMatch);
+        }
+        else
+        {
+            fullSystem->addActiveFrame(img, img, frame->id);
+        }
+
         delete img;
     });
 
     input.playback();
 
-    fullSystem->blockUntilMappingIsFinished();
-    fullSystem->printResult("result.txt");
-    fullSystem->printFrameLifetimes();
+
 
     if(viewer != 0)
     {
         viewer->run();
     }
+
+    fullSystem->blockUntilMappingIsFinished();
+    fullSystem->printResult("result.txt");
+    fullSystem->printFrameLifetimes();
 
     for(IOWrap::Output3DWrapper* ow : fullSystem->outputWrapper)
     {

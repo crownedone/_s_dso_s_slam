@@ -55,11 +55,15 @@ public:
         int coarsestLvl, Vec5 minResForAbort,
         IOWrap::Output3DWrapper* wrap = 0);
 
-    void setCoarseTrackingRef(
+    void setCTRefForFirstFrame(
         std::vector<FrameHessian*> frameHessians);
 
-    void makeK(
-        CalibHessian* HCalib);
+    void setCoarseTrackingRef(
+        std::vector<FrameHessian*> frameHessians, FrameHessian* fh_right, CalibHessian Hcalib);
+
+    void makeCoarseDepthForFirstFrame(FrameHessian* fh);
+
+    void makeK(CalibHessian* HCalib);
 
     bool debugPrint, debugPlot;
 
@@ -90,8 +94,8 @@ public:
     double firstCoarseRMSE;
 private:
 
+    void makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians, FrameHessian* fh_right, CalibHessian Hcalib);
 
-    void makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians);
     float* idepth[PYR_LEVELS];
     float* weightSums[PYR_LEVELS];
     float* weightSums_bak[PYR_LEVELS];
@@ -120,10 +124,6 @@ private:
     float* buf_warped_weight;
     float* buf_warped_refColor;
     int buf_warped_n;
-
-
-    std::vector<float*> ptrToDelete;
-
 
     Accumulator9 acc;
 };

@@ -130,9 +130,7 @@ public:
         Calling:
         Always called, no overhead if not used.
     */
-    virtual void publishGraph(const
-                              std::map<uint64_t, Eigen::Vector2i, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Vector2i>>>&
-                              connectivity) {}
+    virtual void publishGraph(const std::map<long, Eigen::Vector2i>& connectivity) {}
 
 
 
@@ -177,6 +175,7 @@ public:
         Always called, no overhead if not used.
     */
     virtual void pushLiveFrame(FrameHessian* image) {}
+    virtual void pushStereoLiveFrame(FrameHessian* image, FrameHessian* image1) {}
 
 
 
