@@ -61,7 +61,7 @@
 DEFINE_string(sequenceFolder, "", "path to your sequence Folder");
 DEFINE_bool(runQuiet, true, "Disable debug output");
 DEFINE_bool(useSampleOutput, false, "Disable debug output");
-DEFINE_int32(preset, 0, \
+DEFINE_int32(preset, 0,
              "0 - DEFAULT settings : \n"\
              "- %s real-time enforcing\n"\
              "- 2000 active points\n"\
@@ -87,8 +87,8 @@ DEFINE_int32(preset, 0, \
              "- %s real-time enforcing\n"\
              "- 800 active points\n"\
              "- 4-6 active frames\n"\
-             "- 1-4 LM iteration each KF\n"\
-             "- 424 x 320 image resolution\n"\
+             "- 1-4 LM iteration each KF \n" \
+             "- 424 x 320 image resolution \n" \
              "- 5x speedup");
 
 /// Validator accessor to validate input parameter: Settings
@@ -140,20 +140,17 @@ void settingsDefault(int preset)
 
         playbackSpeed = (preset == 0 ? 0.f : 1.f);
         preload = preset == 1;
-        setting_desiredImmatureDensity = 1500;
-        setting_desiredPointDensity = 2000;
         setting_minFrames = 5;
         setting_maxFrames = 7;
         setting_maxOptIterations = 6;
         setting_minOptIterations = 1;
 
-        // original is 1.0. 0.3 is a balance between speed and accuracy. if tracking lost, set this para higher
-        setting_kfGlobalWeight = 0.3;
-        setting_maxShiftWeightT = 0.04f * (640 + 128);   // original is 0.04f * (640+480); this para is depend on the crop size.
-        setting_maxShiftWeightR = 0.04f * (640 + 128);    // original is 0.0f * (640+480);
-        setting_maxShiftWeightRT = 0.02f * (640 + 128);  // original is 0.02f * (640+480);
+        // Go back to previous values
+        setting_desiredImmatureDensity = 1500;
+        setting_desiredPointDensity = 2000;
+        setting_kfGlobalWeight = 1.0;
 
-        setting_logStuff = false;
+        setting_logStuff = true;
     }
 
     if(preset == 2 || preset == 3)
@@ -305,6 +302,9 @@ int main( int argc, char** argv )
         ImageAndExposure* img = undistort->undistort<unsigned char>(
                                     frame->frame, frame->exposure, frame->timestamp);
 
+        ImageAndExposure* img1 = (!frame->frame_slave1.empty()) ?  undistort->undistort<unsigned char>(
+                                     frame->frame_slave1, frame->exposure_slave1, frame->timestamp_slave1) : nullptr;
+
         if (false)// FLAGS_stereomatch)
         {
             std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
@@ -319,10 +319,22 @@ int main( int argc, char** argv )
         }
         else
         {
-            fullSystem->addActiveFrame(img, img, frame->id);
+            if (img1)
+            {
+                fullSystem->addActiveFrame(img, img1, frame->id);
+            }
+            else
+            {
+                fullSystem->addActiveFrame(img, frame->id);
+            }
         }
 
         delete img;
+
+        if (img1)
+        {
+            delete img1;
+        }
     });
 
     input.playback();

@@ -12,14 +12,16 @@ namespace IO
 
 struct FramePack
 {
-    FramePack() : timestamp(0.0), exposure(1.f) {};
+    FramePack() : timestamp(0.0), exposure(1.f), timestamp_slave1(0.0), exposure_slave1(1.f), id(0) {};
 
     cv::Mat frame;
     cv::Mat frame_slave1;
     cv::Mat depthFrame;
 
     double timestamp;
+    double timestamp_slave1;
     float exposure;
+    float exposure_slave1;
     int id;
 };
 
@@ -88,12 +90,17 @@ public:
 
 private:
     std::vector<std::string> files;
+    std::vector<std::string> files1;
     std::vector<double> timestamps;
+    std::vector<double> timestamps1;
     std::vector<float> exposures;
+    std::vector<float> exposures1;
 
     std::string path;
     std::string images;
+    std::string images1; // optional stereo frames
     std::string calibfile;
+    std::string calibfile1;
     std::string gamma;
     std::string vignette;
 

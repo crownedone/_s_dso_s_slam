@@ -1149,7 +1149,8 @@ void CoarseInitializer::setFirst(   CalibHessian* HCalib, FrameHessian* newFrame
             for(int x = patternPadding + 1; x < wl - patternPadding - 2; x++)
             {
                 //if(x==2) LOG_INFO("y=%d!\n",y);
-                if(lvl != 0 && statusMapB[x + y * wl])
+                // the second predicate is only for mono! ergo baseline <= 0.02
+                if((lvl != 0 && statusMapB[x + y * wl]) || (baseline <= 0.02 && lvl == 0 && statusMap[x + y * wl] != 0))
                 {
                     //assert(patternNum==9);
                     pl[nl].u = x + 0.1f;

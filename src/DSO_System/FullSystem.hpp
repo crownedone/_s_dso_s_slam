@@ -151,6 +151,7 @@ public:
     virtual ~FullSystem();
 
     // adds a new frame, and creates point & residual structs.
+    void addActiveFrame(ImageAndExposure* image, int id);
     void addActiveFrame(ImageAndExposure* image, ImageAndExposure* image_right, int id);
 
     // marginalizes a frame. drops / marginalizes points & residuals.
@@ -161,6 +162,8 @@ public:
 
     //compute stereo idepth
     void stereoMatch(ImageAndExposure* image, ImageAndExposure* image_right, int id, cv::Mat& idepthMap);
+    // Mono
+    void traceNewCoarse(FrameHessian* fh);
 
     void printResult(std::string file);
 
@@ -197,6 +200,7 @@ private:
     void traceNewCoarseNonKey(FrameHessian* fh, FrameHessian* fh_right);
 
     // mainPipelineFunctions
+    Vec4 trackNewCoarse(FrameHessian* fh);
     Vec4 trackNewCoarse(FrameHessian* fh, FrameHessian* fh_right);
     void traceNewCoarseKey(FrameHessian* fh, FrameHessian* fh_right);
     void activatePoints();
@@ -324,8 +328,11 @@ private:
         tracking always uses the newest KF as reference.
 
     */
+    void makeKeyFrame(FrameHessian* fh);
     void makeKeyFrame(FrameHessian* fh, FrameHessian* fh_right);
+    void makeNonKeyFrame(FrameHessian* fh);
     void makeNonKeyFrame(FrameHessian* fh, FrameHessian* fh_right);
+    void deliverTrackedFrame(FrameHessian* fh,  bool needKF);
     void deliverTrackedFrame(FrameHessian* fh, FrameHessian* fh_right, bool needKF);
     void mappingLoop();
 

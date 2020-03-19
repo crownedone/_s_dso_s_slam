@@ -1109,11 +1109,19 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
     if (std::sscanf(l5.c_str(), "%f", &bl) == 1)
     {
         LOG_INFO("Baseline: %f \n", bl);
+        /// Stereo
+        // original is 1.0. 0.3 is a balance between speed and accuracy. if tracking lost, set this para higher
+        //setting_kfGlobalWeight = 1.0;
+        setting_desiredImmatureDensity = 3000; // original is 1500 immature points per frame
+        setting_desiredPointDensity = 4000; // original is 2000
+        //setting_maxShiftWeightT = 0.04f * (640 + 128);   // original is 0.04f * (640+480); this para is depend on the crop size.
+        //setting_maxShiftWeightR = 0.04f * (640 + 128);    // original is 0.0f * (640+480);
+        //setting_maxShiftWeightRT = 0.02f * (640 + 128);  // original is 0.02f * (640+480);
     }
     else
     {
         LOG_ERROR("Out: Failed to Read Baseline... can not do stereo. \n");
-        bl = 0.f;
+        bl = 0.02f;
     }
 
     remapX = new float[w * h];

@@ -395,15 +395,14 @@ inline int makePixelStatus(Eigen::Vector3f* grads, bool* map, int w, int h, floa
        ( quotia > 0.8 &&  1.0f / quotia > 0.8) ||
        recsLeft == 0)
     {
-
-//      printf(" \n");
+        LOG_INFO(" \n");
         //all good
         sparsityFactor = newSparsity;
         return numGoodPoints;
     }
     else
     {
-//      printf(" -> re-evaluate! \n");
+        LOG_INFO(" -> re-evaluate!");
         // re-evaluate.
         sparsityFactor = newSparsity;
         return makePixelStatus(grads, map, w, h, desiredDensity, recsLeft - 1, THFac);

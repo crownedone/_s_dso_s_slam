@@ -266,11 +266,11 @@ int PixelSelector::makeMaps(
                 idealPotential = currentPotential - 1;
             }
 
-            //      LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-            //              100*numHave/(float)(wG[0]*hG[0]),
-            //              100*numWant/(float)(wG[0]*hG[0]),
-            //              currentPotential,
-            //              idealPotential);
+            LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+                     100 * numHave / (float)(wG[0]*hG[0]),
+                     100 * numWant / (float)(wG[0]*hG[0]),
+                     currentPotential,
+                     idealPotential);
             currentPotential = idealPotential;
             return makeMaps(fh, map_out, density, recursionsLeft - 1, plot, thFactor);
         }
@@ -283,11 +283,11 @@ int PixelSelector::makeMaps(
                 idealPotential = currentPotential + 1;
             }
 
-            //      LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
-            //              100*numHave/(float)(wG[0]*hG[0]),
-            //              100*numWant/(float)(wG[0]*hG[0]),
-            //              currentPotential,
-            //              idealPotential);
+            LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. RESAMPLE with pot %d -> %d.\n",
+                     100 * numHave / (float)(wG[0]*hG[0]),
+                     100 * numWant / (float)(wG[0]*hG[0]),
+                     currentPotential,
+                     idealPotential);
             currentPotential = idealPotential;
             return makeMaps(fh, map_out, density, recursionsLeft - 1, plot, thFactor);
 
@@ -317,12 +317,12 @@ int PixelSelector::makeMaps(
         }
     }
 
-//  LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. KEEPCURR with pot %d -> %d. Subsampled to %.2f%%\n",
-//          100*numHave/(float)(wG[0]*hG[0]),
-//          100*numWant/(float)(wG[0]*hG[0]),
-//          currentPotential,
-//          idealPotential,
-//          100*numHaveSub/(float)(wG[0]*hG[0]));
+    LOG_INFO("PixelSelector: have %.2f%%, need %.2f%%. KEEPCURR with pot %d -> %d. Subsampled to %.2f%%\n",
+             100 * numHave / (float)(wG[0]*hG[0]),
+             100 * numWant / (float)(wG[0]*hG[0]),
+             currentPotential,
+             idealPotential,
+             100 * numHaveSub / (float)(wG[0]*hG[0]));
     currentPotential = idealPotential;
 
 
@@ -368,6 +368,8 @@ int PixelSelector::makeMaps(
             }
 
         IOWrap::displayImage("Selector Pixels", img);
+
+        IOWrap::waitKey(1);
     }
 
     return numHaveSub;
