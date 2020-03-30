@@ -506,9 +506,8 @@ void Undistort::loadPhotometricCalibration(std::string file, std::string noiseIm
                                                    getOriginalSize()[0], getOriginalSize()[1]);
 }
 
-template<typename T>
-ImageAndExposure* Undistort::undistort(const cv::Mat& image_raw, float exposure,
-                                       double timestamp, float factor) const
+std::shared_ptr<ImageAndExposure> Undistort::undistort(const cv::Mat& image_raw, float exposure,
+        double timestamp, float factor) const
 {
     if(image_raw.cols != wOrg || image_raw.rows != hOrg)
     {
@@ -518,7 +517,7 @@ ImageAndExposure* Undistort::undistort(const cv::Mat& image_raw, float exposure,
     }
 
     photometricUndist->processFrame(image_raw, exposure, factor);
-    ImageAndExposure* result = new ImageAndExposure(w, h, timestamp);
+    std::shared_ptr<ImageAndExposure> result = std::make_shared<ImageAndExposure>(w, h, timestamp);
     photometricUndist->output->copyMetaTo(*result);
 
     if (!passthrough)
@@ -629,11 +628,6 @@ ImageAndExposure* Undistort::undistort(const cv::Mat& image_raw, float exposure,
 
     return result;
 }
-template ImageAndExposure* Undistort::undistort<unsigned char>(const cv::Mat&
-        image_raw, float exposure, double timestamp, float factor) const;
-template ImageAndExposure* Undistort::undistort<unsigned short>(const cv::Mat&
-        image_raw, float exposure, double timestamp, float factor) const;
-
 
 void Undistort::applyBlurNoise(float* img) const
 {

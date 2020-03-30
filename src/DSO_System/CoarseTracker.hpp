@@ -50,20 +50,20 @@ public:
     ~CoarseTracker();
 
     bool trackNewestCoarse(
-        FrameHessian* newFrameHessian,
+        std::shared_ptr<FrameHessian> newFrameHessian,
         SE3& lastToNew_out, AffLight& aff_g2l_out,
         int coarsestLvl, Vec5 minResForAbort,
         IOWrap::Output3DWrapper* wrap = 0);
 
     void setCTRefForFirstFrame(
-        std::vector<FrameHessian*> frameHessians);
+        std::vector<std::shared_ptr<FrameHessian>> frameHessians);
 
     void setCoarseTrackingRef(
-        std::vector<FrameHessian*> frameHessians);
+        std::vector<std::shared_ptr<FrameHessian>> frameHessians);
     void setCoarseTrackingRef(
-        std::vector<FrameHessian*> frameHessians, FrameHessian* fh_right, CalibHessian Hcalib);
+        std::vector<std::shared_ptr<FrameHessian>> frameHessians, std::shared_ptr<FrameHessian> fh_right, CalibHessian Hcalib);
 
-    void makeCoarseDepthForFirstFrame(FrameHessian* fh);
+    void makeCoarseDepthForFirstFrame(std::shared_ptr<FrameHessian> fh);
 
     void makeK(CalibHessian* HCalib);
 
@@ -82,12 +82,12 @@ public:
     int w[PYR_LEVELS];
     int h[PYR_LEVELS];
 
-    void debugPlotIDepthMap(float* minID, float* maxID, std::vector<IOWrap::Output3DWrapper*>& wraps);
-    void debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*>& wraps);
+    void debugPlotIDepthMap(float* minID, float* maxID, std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps);
+    void debugPlotIDepthMapFloat(std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps);
 
-    FrameHessian* lastRef;
+    std::shared_ptr<FrameHessian> lastRef;
     AffLight lastRef_aff_g2l;
-    FrameHessian* newFrame;
+    std::shared_ptr<FrameHessian> newFrame;
     int refFrameID;
 
     // act as pure ouptut
@@ -96,8 +96,10 @@ public:
     double firstCoarseRMSE;
 private:
 
-    void makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians);
-    void makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians, FrameHessian* fh_right, CalibHessian Hcalib);
+    void makeCoarseDepthL0(std::vector<std::shared_ptr<FrameHessian>> frameHessians);
+    void makeCoarseDepthL0(std::vector<std::shared_ptr<FrameHessian>> frameHessians,
+                           std::shared_ptr<FrameHessian> fh_right,
+                           CalibHessian Hcalib);
 
     float* idepth[PYR_LEVELS];
     float* weightSums[PYR_LEVELS];
@@ -141,11 +143,8 @@ public:
     ~CoarseDistanceMap();
 
     void makeDistanceMap(
-        std::vector<FrameHessian*> frameHessians,
-        FrameHessian* frame);
-
-    void makeInlierVotes(
-        std::vector<FrameHessian*> frameHessians);
+        std::vector<std::shared_ptr<FrameHessian>> frameHessians,
+        std::shared_ptr<FrameHessian> frame);
 
     void makeK( CalibHessian* HCalib);
 
@@ -170,8 +169,8 @@ public:
 
 private:
 
-    PointFrameResidual** coarseProjectionGrid;
-    int* coarseProjectionGridNum;
+    //PointFrameResidual** coarseProjectionGrid;
+    //int* coarseProjectionGridNum;
     Eigen::Vector2i* bfsList1;
     Eigen::Vector2i* bfsList2;
 

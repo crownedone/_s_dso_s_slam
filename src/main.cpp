@@ -50,7 +50,7 @@
 #include "DSO_system/PixelSelector.hpp"
 
 // Read input
-#include "util/DatasetReader.hpp"
+#include <boost/filesystem.hpp>
 
 #include "IOWrapper/Pangolin/PangolinDSOViewer.hpp"
 #include "IOWrapper/SampleOutputWrapper.hpp"
@@ -59,8 +59,8 @@
 
 // Path to the sequence folder.
 DEFINE_string(sequenceFolder, "", "path to your sequence Folder");
-DEFINE_bool(runQuiet, true, "Disable debug output");
-DEFINE_bool(useSampleOutput, false, "Disable debug output");
+DEFINE_bool(runQuiet, false, "Disable debug output");
+
 DEFINE_int32(preset, 0,
              "0 - DEFAULT settings : \n"\
              "- %s real-time enforcing\n"\
@@ -186,6 +186,9 @@ int main( int argc, char** argv )
     // http://rpg.ifi.uzh.ch/docs/glog.html
     google::InitGoogleLogging(argv[0]);
 
+    // Intend to do parallelization
+    Eigen::initParallel();
+
     // log options (there are more options available)
     FLAGS_alsologtostderr = 1;
     FLAGS_colorlogtostderr = 1;
@@ -200,9 +203,7 @@ int main( int argc, char** argv )
         exit(1);
     }
 
-
     setting_debugout_runquiet = FLAGS_runQuiet;
-    usO = FLAGS_useSampleOutput;
 
     settingsDefault(FLAGS_preset);
 
@@ -248,21 +249,16 @@ int main( int argc, char** argv )
     int lstart = start;
     int lend = end;
 
-    FullSystem* fullSystem = new FullSystem();
+    std::unique_ptr<FullSystem> fullSystem = std::make_unique<FullSystem>();
     fullSystem->setGammaFunction(photometricGamma);
     fullSystem->linearizeOperation = (playbackSpeed == 0);
 
-    IOWrap::PangolinDSOViewer* viewer = 0;
+    std::shared_ptr<IOWrap::PangolinDSOViewer> viewer = nullptr;
 
     if(!disableAllDisplay)
     {
-        viewer = new IOWrap::PangolinDSOViewer(wG[0], hG[0], false);
+        viewer = std::make_shared<IOWrap::PangolinDSOViewer>(wG[0], hG[0], false);
         fullSystem->outputWrapper.push_back(viewer);
-    }
-
-    if(usO)
-    {
-        fullSystem->outputWrapper.push_back(new IOWrap::SampleOutputWrapper());
     }
 
     int id = 0;
@@ -274,15 +270,15 @@ int main( int argc, char** argv )
             {
                 LOG_WARNING("RESETTING!\n");
 
-                std::vector<IOWrap::Output3DWrapper*> wraps = fullSystem->outputWrapper;
-                delete fullSystem;
+                auto wraps = fullSystem->outputWrapper;
+                fullSystem = nullptr;
 
-                for (IOWrap::Output3DWrapper* ow : wraps)
+                for (auto& ow : wraps)
                 {
                     ow->reset();
                 }
 
-                fullSystem = new FullSystem();
+                fullSystem = std::make_unique<FullSystem>();
                 fullSystem->setGammaFunction(photometricGamma);
                 fullSystem->linearizeOperation = (playbackSpeed == 0);
 
@@ -299,11 +295,11 @@ int main( int argc, char** argv )
             return;
         }
 
-        ImageAndExposure* img = undistort->undistort<unsigned char>(
-                                    frame->frame, frame->exposure, frame->timestamp);
+        auto img = undistort->undistort(
+                       frame->frame, frame->exposure, frame->timestamp);
 
-        ImageAndExposure* img1 = (!frame->frame_slave1.empty()) ?  undistort->undistort<unsigned char>(
-                                     frame->frame_slave1, frame->exposure_slave1, frame->timestamp_slave1) : nullptr;
+        auto img1 = (!frame->frame_slave1.empty()) ?  undistort->undistort(
+                        frame->frame_slave1, frame->exposure_slave1, frame->timestamp_slave1) : nullptr;
 
         if (false)// FLAGS_stereomatch)
         {
@@ -328,13 +324,6 @@ int main( int argc, char** argv )
                 fullSystem->addActiveFrame(img, frame->id);
             }
         }
-
-        delete img;
-
-        if (img1)
-        {
-            delete img1;
-        }
     });
 
     input.playback();
@@ -350,14 +339,11 @@ int main( int argc, char** argv )
     fullSystem->printResult("result.txt");
     fullSystem->printFrameLifetimes();
 
-    for(IOWrap::Output3DWrapper* ow : fullSystem->outputWrapper)
+    for(auto ow : fullSystem->outputWrapper)
     {
         ow->join();
-        delete ow;
+        ow = nullptr;
     }
-
-    LOG_INFO("DELETE FULLSYSTEM!\n");
-    delete fullSystem;
 
     LOG_INFO("DELETE READER!\n");
     delete undistort;

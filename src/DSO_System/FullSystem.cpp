@@ -160,9 +160,7 @@ FullSystem::FullSystem()
 
     assert(retstat != 293847);
 
-
-
-    selectionMap = new float[wG[0] * hG[0]];
+    selectionMap.resize(wG[0] * hG[0]);
 
     coarseDistanceMap = new CoarseDistanceMap(wG[0], hG[0]);
     coarseTracker = new CoarseTracker(wG[0], hG[0]);
@@ -185,7 +183,7 @@ FullSystem::FullSystem()
     initialized = false;
 
 
-    ef = new EnergyFunctional();
+    ef = std::make_unique<EnergyFunctional>();
     ef->red = &this->treadReduce;
 
     isLost = false;
@@ -234,24 +232,11 @@ FullSystem::~FullSystem()
         delete nullspacesLog;
     }
 
-    delete[] selectionMap;
-
-    for (FrameShell* s : allFrameHistory)
-    {
-        delete s;
-    }
-
-    for (FrameHessian* fh : unmappedTrackedFrames)
-    {
-        delete fh;
-    }
-
     delete coarseDistanceMap;
     delete coarseTracker;
     delete coarseTracker_forNewKF;
     delete coarseInitializer;
     delete pixelSelector;
-    delete ef;
 }
 
 void FullSystem::setOriginalCalib(const VecXf& originalCalib, int originalW, int originalH)
@@ -310,7 +295,7 @@ void FullSystem::printResult(std::string file)
     Eigen::Matrix<double, 3, 3> last_R = (*(allFrameHistory.begin()))->camToWorld.so3().matrix();
     Eigen::Matrix<double, 3, 1> last_T = (*(allFrameHistory.begin()))->camToWorld.translation().transpose();
 
-    for (FrameShell* s : allFrameHistory)
+    for (auto& s : allFrameHistory)
     {
         if (!s->poseValid)
         {
@@ -350,7 +335,7 @@ void FullSystem::printResult(std::string file)
     myfile.close();
 }
 
-Vec4 FullSystem::trackNewCoarse(FrameHessian* fh, FrameHessian* fh_right)
+Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right)
 {
 
     assert(allFrameHistory.size() > 0);
@@ -359,12 +344,12 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh, FrameHessian* fh_right)
     //    LOG_INFO("the size of allFrameHistory is %d \n", (int)allFrameHistory.size());
 
     // show original images
-    for (IOWrap::Output3DWrapper* ow : outputWrapper)
+    for (auto& ow : outputWrapper)
     {
         ow->pushStereoLiveFrame(fh, fh_right);
     }
 
-    FrameHessian* lastF = coarseTracker->lastRef;
+    std::shared_ptr<FrameHessian> lastF = coarseTracker->lastRef;
 
     AffLight aff_last_2_l = AffLight(0, 0);
 
@@ -415,8 +400,8 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh, FrameHessian* fh_right)
     }
     else
     {
-        FrameShell* slast = allFrameHistory[allFrameHistory.size() - 2];
-        FrameShell* sprelast = allFrameHistory[allFrameHistory.size() - 3];
+        auto slast = allFrameHistory[allFrameHistory.size() - 2];
+        auto sprelast = allFrameHistory[allFrameHistory.size() - 3];
         SE3 slast_2_sprelast;
         SE3 lastF_2_slast;
         {
@@ -642,18 +627,18 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh, FrameHessian* fh_right)
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
 }
 
-Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
+Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh)
 {
 
     assert(allFrameHistory.size() > 0);
     // set pose initialization.
 
-    for (IOWrap::Output3DWrapper* ow : outputWrapper)
+    for (auto& ow : outputWrapper)
     {
         ow->pushLiveFrame(fh);
     }
 
-    FrameHessian* lastF = coarseTracker->lastRef;
+    std::shared_ptr<FrameHessian> lastF = coarseTracker->lastRef;
 
     AffLight aff_last_2_l = AffLight(0, 0);
 
@@ -666,8 +651,8 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
         }
     else
     {
-        FrameShell* slast = allFrameHistory[allFrameHistory.size() - 2];
-        FrameShell* sprelast = allFrameHistory[allFrameHistory.size() - 3];
+        auto slast = allFrameHistory[allFrameHistory.size() - 2];
+        auto sprelast = allFrameHistory[allFrameHistory.size() - 3];
         SE3 slast_2_sprelast;
         SE3 lastF_2_slast;
         {
@@ -877,12 +862,14 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
     return Vec4(achievedRes[0], flowVecs[0], flowVecs[1], flowVecs[2]);
 }
 
-void FullSystem::stereoMatch(ImageAndExposure* image, ImageAndExposure* image_right, int id, cv::Mat& idepthMap)
+void FullSystem::stereoMatch(std::shared_ptr<ImageAndExposure> image,
+                             std::shared_ptr<ImageAndExposure> image_right, int id,
+                             cv::Mat& idepthMap)
 {
     // =========================== add into allFrameHistory =========================
-    FrameHessian* fh = new FrameHessian();
-    FrameHessian* fh_right = new FrameHessian();
-    FrameShell* shell = new FrameShell();
+    auto fh = std::make_shared<FrameHessian>();
+    auto fh_right = std::make_shared<FrameHessian>();
+    auto shell = std::make_shared<FrameShell>();
     shell->camToWorld = SE3();      // no lock required, as fh is not used anywhere yet.
     shell->aff_g2l = AffLight(0, 0);
     shell->marginalizedAt = shell->id = allFrameHistory.size();
@@ -917,17 +904,17 @@ void FullSystem::stereoMatch(ImageAndExposure* image, ImageAndExposure* image_ri
         ph->idepth_min_stereo = ph->idepth_min = 0;
         ph->idepth_max_stereo = ph->idepth_max = NAN;
 
-        ImmaturePointStatus phTraceRightStatus = ph->traceStereo(fh_right, K, 1);
+        ImmaturePointStatus phTraceRightStatus = ph->traceStereo(fh_right->dI_ptr, K, 1);
 
         if (phTraceRightStatus == ImmaturePointStatus::IPS_GOOD)
         {
-            ImmaturePoint* phRight = new ImmaturePoint(ph->lastTraceUV(0), ph->lastTraceUV(1), fh_right, &Hcalib);
+            ImmaturePoint* phRight = new ImmaturePoint(ph->lastTraceUV(0), ph->lastTraceUV(1), fh_right.get(), &Hcalib);
 
             phRight->u_stereo = phRight->u;
             phRight->v_stereo = phRight->v;
             phRight->idepth_min_stereo = ph->idepth_min = 0;
             phRight->idepth_max_stereo = ph->idepth_max = NAN;
-            ImmaturePointStatus  phTraceLeftStatus = phRight->traceStereo(fh, K, 0);
+            ImmaturePointStatus  phTraceLeftStatus = phRight->traceStereo(fh->dI_ptr, K, 0);
 
             float u_stereo_delta = abs(ph->u_stereo - phRight->lastTraceUV(0));
             float depth = 1.0f / ph->idepth_stereo;
@@ -958,13 +945,10 @@ void FullSystem::stereoMatch(ImageAndExposure* image, ImageAndExposure* image_ri
 
     std::cout << " frameID " << id << " got good matches " << counter << std::endl;
 
-    delete fh;
-    delete fh_right;
-
     return;
 }
 
-void FullSystem::traceNewCoarse(FrameHessian* fh)
+void FullSystem::traceNewCoarse(std::shared_ptr<FrameHessian> fh)
 {
     boost::unique_lock<boost::mutex> lock(mapMutex);
 
@@ -977,7 +961,7 @@ void FullSystem::traceNewCoarse(FrameHessian* fh)
     K(0, 2) = Hcalib.cxl();
     K(1, 2) = Hcalib.cyl();
 
-    for (FrameHessian* host : frameHessians)        // go through all active frames
+    for (auto& host : frameHessians)        // go through all active frames
     {
 
         SE3 hostToNew = fh->PRE_worldToCam * host->PRE_camToWorld;
@@ -988,7 +972,7 @@ void FullSystem::traceNewCoarse(FrameHessian* fh)
 
         for (ImmaturePoint* ph : host->immaturePoints)
         {
-            ph->traceOn(fh, KRKi, Kt, aff, &Hcalib, false);
+            ph->traceOn(fh.get(), KRKi, Kt, aff, &Hcalib, false);
 
             if (ph->lastTraceStatus == ImmaturePointStatus::IPS_GOOD)
             {
@@ -1036,7 +1020,7 @@ void FullSystem::traceNewCoarse(FrameHessian* fh)
 
 
 // process nonkey frame to refine key frame idepth
-void FullSystem::traceNewCoarseNonKey(FrameHessian* fh, FrameHessian* fh_right)
+void FullSystem::traceNewCoarseNonKey(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right)
 {
     boost::unique_lock<boost::mutex> lock(mapMutex);
 
@@ -1053,7 +1037,7 @@ void FullSystem::traceNewCoarseNonKey(FrameHessian* fh, FrameHessian* fh_right)
     Mat33f Ki = K.inverse();
 
 
-    for (FrameHessian* host : frameHessians)        // go through all active frames
+    for (auto& host : frameHessians)        // go through all active frames
     {
         //      number++;
         int trace_total = 0, trace_good = 0, trace_oob = 0, trace_out = 0, trace_skip = 0, trace_badcondition = 0,
@@ -1076,11 +1060,11 @@ void FullSystem::traceNewCoarseNonKey(FrameHessian* fh, FrameHessian* fh_right)
         for (ImmaturePoint* ph : host->immaturePoints)
         {
             // do temperol stereo match
-            ImmaturePointStatus phTrackStatus = ph->traceOn(fh, KRKi, Kt, aff, &Hcalib, false);
+            ImmaturePointStatus phTrackStatus = ph->traceOn(fh.get(), KRKi, Kt, aff, &Hcalib, false);
 
             if (phTrackStatus == ImmaturePointStatus::IPS_GOOD)
             {
-                ImmaturePoint* phNonKey = new ImmaturePoint(ph->lastTraceUV(0), ph->lastTraceUV(1), fh, &Hcalib);
+                ImmaturePoint* phNonKey = new ImmaturePoint(ph->lastTraceUV(0), ph->lastTraceUV(1), fh.get(), &Hcalib);
 
                 // project onto newest frame
                 Vec3f ptpMin = KRKi * (Vec3f(ph->u, ph->v, 1) / ph->idepth_min) + Kt;
@@ -1096,11 +1080,11 @@ void FullSystem::traceNewCoarseNonKey(FrameHessian* fh, FrameHessian* fh_right)
                 phNonKey->idepth_max_stereo = phNonKey->idepth_max;
 
                 // do static stereo match from left image to right
-                ImmaturePointStatus phNonKeyStereoStatus = phNonKey->traceStereo(fh_right, K, 1);
+                ImmaturePointStatus phNonKeyStereoStatus = phNonKey->traceStereo(fh_right->dI_ptr, K, 1);
 
                 if (phNonKeyStereoStatus == ImmaturePointStatus::IPS_GOOD)
                 {
-                    ImmaturePoint* phNonKeyRight = new ImmaturePoint(phNonKey->lastTraceUV(0), phNonKey->lastTraceUV(1), fh_right, &Hcalib);
+                    ImmaturePoint* phNonKeyRight = new ImmaturePoint(phNonKey->lastTraceUV(0), phNonKey->lastTraceUV(1), fh_right.get(), &Hcalib);
 
                     phNonKeyRight->u_stereo = phNonKeyRight->u;
                     phNonKeyRight->v_stereo = phNonKeyRight->v;
@@ -1108,7 +1092,7 @@ void FullSystem::traceNewCoarseNonKey(FrameHessian* fh, FrameHessian* fh_right)
                     phNonKeyRight->idepth_max_stereo = phNonKey->idepth_max;
 
                     // do static stereo match from right image to left
-                    ImmaturePointStatus  phNonKeyRightStereoStatus = phNonKeyRight->traceStereo(fh, K, 0);
+                    ImmaturePointStatus  phNonKeyRightStereoStatus = phNonKeyRight->traceStereo(fh->dI_ptr, K, 0);
 
                     // change of u after two different stereo match
                     float u_stereo_delta = abs(phNonKey->u_stereo - phNonKeyRight->lastTraceUV(0));
@@ -1183,7 +1167,7 @@ void FullSystem::traceNewCoarseNonKey(FrameHessian* fh, FrameHessian* fh_right)
 
 
 //process keyframe
-void FullSystem::traceNewCoarseKey(FrameHessian* fh, FrameHessian* fh_right)
+void FullSystem::traceNewCoarseKey(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right)
 {
     boost::unique_lock<boost::mutex> lock(mapMutex);
 
@@ -1196,7 +1180,7 @@ void FullSystem::traceNewCoarseKey(FrameHessian* fh, FrameHessian* fh_right)
     K(0, 2) = Hcalib.cxl();
     K(1, 2) = Hcalib.cyl();
 
-    for (FrameHessian* host : frameHessians)        // go through all active frames
+    for (auto& host : frameHessians)        // go through all active frames
     {
 
         // trans from reference key frame to the newest one
@@ -1210,7 +1194,7 @@ void FullSystem::traceNewCoarseKey(FrameHessian* fh, FrameHessian* fh_right)
 
         for (ImmaturePoint* ph : host->immaturePoints)
         {
-            ImmaturePointStatus phTrackStatus = ph->traceOn(fh, KRKi, Kt, aff, &Hcalib, false);
+            ImmaturePointStatus phTrackStatus = ph->traceOn(fh.get(), KRKi, Kt, aff, &Hcalib, false);
 
             if (ph->lastTraceStatus == ImmaturePointStatus::IPS_GOOD)
             {
@@ -1321,7 +1305,7 @@ void FullSystem::activatePointsMT()
 
 
 
-    FrameHessian* newestHs = frameHessians.back();
+    auto newestHs = frameHessians.back();
 
     // make dist map.
     coarseDistanceMap->makeK(&Hcalib);
@@ -1333,9 +1317,9 @@ void FullSystem::activatePointsMT()
     toOptimize.reserve(20000);
 
 
-    for (FrameHessian* host : frameHessians)        // go through all active frames
+    for (auto& host : frameHessians)        // go through all active frames
     {
-        if (host == newestHs)
+        if (host.get() == newestHs.get())
         {
             continue;
         }
@@ -1406,7 +1390,7 @@ void FullSystem::activatePointsMT()
             else
             {
                 delete ph;
-                host->immaturePoints[i] = 0; //删除点的操作
+                host->immaturePoints[i] = 0;
             }
         }
     }
@@ -1451,8 +1435,8 @@ void FullSystem::activatePointsMT()
         }
         else if (newpoint == (PointHessian*)((long)(-1)) || ph->lastTraceStatus == IPS_OOB)
         {
-            delete ph;
             ph->host->immaturePoints[ph->idxInImmaturePoints] = 0;
+            delete ph;
         }
         else
         {
@@ -1461,7 +1445,7 @@ void FullSystem::activatePointsMT()
     }
 
 
-    for (FrameHessian* host : frameHessians)
+    for (auto host : frameHessians)
     {
         for (int i = 0; i < (int)host->immaturePoints.size(); i++)
         {
@@ -1487,8 +1471,8 @@ void FullSystem::flagPointsForRemoval()
 {
     assert(EFIndicesValid);
 
-    std::vector<FrameHessian*> fhsToKeepPoints;
-    std::vector<FrameHessian*> fhsToMargPoints;
+    std::vector<std::shared_ptr<FrameHessian>> fhsToKeepPoints;
+    std::vector<std::shared_ptr<FrameHessian>> fhsToMargPoints;
 
     //if(setting_margPointVisWindow>0)
     {
@@ -1511,7 +1495,7 @@ void FullSystem::flagPointsForRemoval()
     //ef->setDeltaF(&Hcalib);
     int flag_oob = 0, flag_in = 0, flag_inin = 0, flag_nores = 0;
 
-    for (FrameHessian* host : frameHessians)        // go through all active frames
+    for (auto& host : frameHessians)        // go through all active frames
     {
         for (unsigned int i = 0; i < host->pointHessians.size(); i++)
         {
@@ -1547,7 +1531,7 @@ void FullSystem::flagPointsForRemoval()
 
                         if (r->efResidual->isActive())
                         {
-                            r->efResidual->fixLinearizationF(ef);
+                            r->efResidual->fixLinearizationF(ef.get());
                             ngoodRes++;
                         }
                     }
@@ -1594,7 +1578,7 @@ void FullSystem::flagPointsForRemoval()
 }
 
 
-void FullSystem::addActiveFrame(ImageAndExposure* image, ImageAndExposure* image_right, int id)
+void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, std::shared_ptr<ImageAndExposure> image_right, int id)
 {
 
     if (isLost)
@@ -1606,9 +1590,9 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, ImageAndExposure* image
 
 
     // =========================== add into allFrameHistory =========================
-    FrameHessian* fh = new FrameHessian();
-    FrameHessian* fh_right = new FrameHessian();
-    FrameShell* shell = new FrameShell();
+    auto fh = std::make_shared<FrameHessian>();
+    auto fh_right = std::make_shared<FrameHessian>();
+    auto shell = std::make_shared<FrameShell>();
     shell->camToWorld = SE3();      // no lock required, as fh is not used anywhere yet.
     shell->aff_g2l = AffLight(0, 0);
     shell->marginalizedAt = shell->id = allFrameHistory.size();
@@ -1630,16 +1614,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, ImageAndExposure* image
         // use initializer!
         if (coarseInitializer->frameID < 0) // first frame set. fh is kept by coarseInitializer.
         {
-            // Consider no baseline as no stereo given
-            //if (baseline > 0.f)
-            //{
             coarseInitializer->setFirstStereo(&Hcalib, fh, fh_right);
-            //}
-            //else
-            //{
-            //    coarseInitializer->setFirst(&Hcalib, fh);
-            //}
-
             initialized = true;
         }
 
@@ -1688,7 +1663,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, ImageAndExposure* image
 
         }
 
-        for (IOWrap::Output3DWrapper* ow : outputWrapper)
+        for (auto& ow : outputWrapper)
         {
             ow->publishCamPose(fh->shell, &Hcalib);
         }
@@ -1699,7 +1674,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, ImageAndExposure* image
     }
 }
 
-void FullSystem::deliverTrackedFrame(FrameHessian* fh, FrameHessian* fh_right, bool needKF)
+void FullSystem::deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right, bool needKF)
 {
 
 
@@ -1760,7 +1735,7 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, FrameHessian* fh_right, b
     }
 }
 
-void FullSystem::addActiveFrame(ImageAndExposure* image, int id)
+void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
 {
 
     if (isLost)
@@ -1772,8 +1747,8 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id)
 
 
     // =========================== add into allFrameHistory =========================
-    FrameHessian* fh = new FrameHessian();
-    FrameShell* shell = new FrameShell();
+    auto fh = std::make_shared<FrameHessian>();
+    auto shell = std::make_shared<FrameShell>();
     shell->camToWorld = SE3();      // no lock required, as fh is not used anywhere yet.
     shell->aff_g2l = AffLight(0, 0);
     shell->marginalizedAt = shell->id = allFrameHistory.size();
@@ -1809,7 +1784,6 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id)
         {
             // if still initializing
             fh->shell->poseValid = false;
-            delete fh;
         }
 
         return;
@@ -1861,7 +1835,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id)
 
 
 
-        for (IOWrap::Output3DWrapper* ow : outputWrapper)
+        for (auto& ow : outputWrapper)
         {
             ow->publishCamPose(fh->shell, &Hcalib);
         }
@@ -1875,7 +1849,7 @@ void FullSystem::addActiveFrame(ImageAndExposure* image, int id)
     }
 }
 
-void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
+void FullSystem::deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, bool needKF)
 {
 
 
@@ -1952,9 +1926,9 @@ void FullSystem::mappingLoop()
             }
         }
 
-        FrameHessian* fh = unmappedTrackedFrames.front();
+        auto fh = unmappedTrackedFrames.front();
         unmappedTrackedFrames.pop_front();
-        FrameHessian* fh_right = unmappedTrackedFrames_right.front();
+        auto fh_right = unmappedTrackedFrames_right.front();
         unmappedTrackedFrames_right.pop_front();
 
 
@@ -1981,7 +1955,7 @@ void FullSystem::mappingLoop()
 
             if (needToKetchupMapping && unmappedTrackedFrames.size() > 0)
             {
-                FrameHessian* fh = unmappedTrackedFrames.front();
+                auto fh = unmappedTrackedFrames.front();
                 unmappedTrackedFrames.pop_front();
                 {
                     boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
@@ -1989,8 +1963,6 @@ void FullSystem::mappingLoop()
                     fh->shell->camToWorld = fh->shell->trackingRef->camToWorld * fh->shell->camToTrackingRef;
                     fh->setEvalPT_scaled(fh->shell->camToWorld.inverse(), fh->shell->aff_g2l);
                 }
-                delete fh;
-                delete fh_right;
             }
 
         }
@@ -2028,7 +2000,7 @@ void FullSystem::blockUntilMappingIsFinished()
 
 }
 
-void FullSystem::makeNonKeyFrame(FrameHessian* fh, FrameHessian* fh_right)
+void FullSystem::makeNonKeyFrame(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right)
 {
     // needs to be set by mapping thread. no lock required since we are in mapping thread.
     {
@@ -2039,12 +2011,9 @@ void FullSystem::makeNonKeyFrame(FrameHessian* fh, FrameHessian* fh_right)
     }
 
     traceNewCoarseNonKey(fh, fh_right);
-
-    delete fh;
-    delete fh_right;
 }
 
-void FullSystem::makeKeyFrame(FrameHessian* fh, FrameHessian* fh_right)
+void FullSystem::makeKeyFrame(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right)
 {
     // needs to be set by mapping thread
     {
@@ -2076,16 +2045,16 @@ void FullSystem::makeKeyFrame(FrameHessian* fh, FrameHessian* fh_right)
     // =========================== add new residuals for old points =========================
     int numFwdResAdde = 0;
 
-    for (FrameHessian* fh1 : frameHessians)     // go through all active frames
+    for (auto fh1 : frameHessians)     // go through all active frames
     {
-        if (fh1 == fh)
+        if (fh1.get() == fh.get())
         {
             continue;
         }
 
         for (PointHessian* ph : fh1->pointHessians)
         {
-            PointFrameResidual* r = new PointFrameResidual(ph, fh1, fh);
+            PointFrameResidual* r = new PointFrameResidual(ph, fh1.get(), fh.get());
             r->setState(ResState::INP);
             ph->residuals.push_back(r);
             ef->insertResidual(r);
@@ -2158,8 +2127,6 @@ void FullSystem::makeKeyFrame(FrameHessian* fh, FrameHessian* fh_right)
 
     //  debugPlot("post Optimize");
 
-
-
     // =========================== (Activate-)Marginalize Points =========================
     flagPointsForRemoval();
     ef->dropPointsF();
@@ -2177,7 +2144,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh, FrameHessian* fh_right)
 
 
 
-    for (IOWrap::Output3DWrapper* ow : outputWrapper)
+    for (auto& ow : outputWrapper)
     {
         ow->publishGraph(ef->connectivityMap);
         ow->publishKeyframes(frameHessians, false, &Hcalib);
@@ -2196,15 +2163,11 @@ void FullSystem::makeKeyFrame(FrameHessian* fh, FrameHessian* fh_right)
         }
     }
 
-    delete fh_right;
-
-
     //  printLogLine();
     //    printEigenValLine();
-
 }
 
-void FullSystem::makeNonKeyFrame(FrameHessian* fh)
+void FullSystem::makeNonKeyFrame(std::shared_ptr<FrameHessian> fh)
 {
     // needs to be set by mapping thread. no lock required since we are in mapping thread.
     {
@@ -2215,10 +2178,9 @@ void FullSystem::makeNonKeyFrame(FrameHessian* fh)
     }
 
     traceNewCoarse(fh);
-    delete fh;
 }
 
-void FullSystem::makeKeyFrame(FrameHessian* fh)
+void FullSystem::makeKeyFrame(std::shared_ptr<FrameHessian> fh)
 {
     // needs to be set by mapping thread
     {
@@ -2250,7 +2212,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
     // =========================== add new residuals for old points =========================
     int numFwdResAdde = 0;
 
-    for (FrameHessian* fh1 : frameHessians)     // go through all active frames
+    for (auto fh1 : frameHessians)     // go through all active frames
     {
         if (fh1 == fh)
         {
@@ -2259,7 +2221,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 
         for (PointHessian* ph : fh1->pointHessians)
         {
-            PointFrameResidual* r = new PointFrameResidual(ph, fh1, fh);
+            PointFrameResidual* r = new PointFrameResidual(ph, fh1.get(), fh.get());
             r->setState(ResState::INP);
             ph->residuals.push_back(r);
             ef->insertResidual(r);
@@ -2364,7 +2326,7 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 
 
 
-    for (IOWrap::Output3DWrapper* ow : outputWrapper)
+    for (auto& ow : outputWrapper)
     {
         ow->publishGraph(ef->connectivityMap);
         ow->publishKeyframes(frameHessians, false, &Hcalib);
@@ -2387,12 +2349,12 @@ void FullSystem::makeKeyFrame(FrameHessian* fh)
 }
 
 
-void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
+void FullSystem::initializeFromInitializer(std::shared_ptr<FrameHessian> newFrame)
 {
     boost::unique_lock<boost::mutex> lock(mapMutex);
 
     // add firstframe.
-    FrameHessian* firstFrame = coarseInitializer->firstFrame;
+    std::shared_ptr<FrameHessian> firstFrame = coarseInitializer->firstFrame;
     firstFrame->idx = frameHessians.size();
     frameHessians.push_back(firstFrame);
     firstFrame->frameID = allKeyFramesHistory.size();
@@ -2433,7 +2395,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
         }
 
         Pnt* point = coarseInitializer->points[0] + i;
-        ImmaturePoint* pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame, point->my_type, &Hcalib);
+        ImmaturePoint* pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame.get(), point->my_type, &Hcalib);
 
         if (!std::isfinite(pt->energyTH))
         {
@@ -2488,7 +2450,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
     LOG_INFO("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int)firstFrame->pointHessians.size());
 }
 // insert the first Frame into FrameHessians
-void FullSystem::initializeFromInitializer(FrameHessian* newFrame, FrameHessian* newFrameR)
+void FullSystem::initializeFromInitializer(std::shared_ptr<FrameHessian> newFrame, std::shared_ptr<FrameHessian> newFrameR)
 {
     boost::unique_lock<boost::mutex> lock(mapMutex);
 
@@ -2501,7 +2463,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame, FrameHessian*
 
 
     // add firstframe.
-    FrameHessian* firstFrame = coarseInitializer->firstFrame;
+    std::shared_ptr<FrameHessian> firstFrame = coarseInitializer->firstFrame;
     firstFrame->idx = frameHessians.size();
     frameHessians.push_back(firstFrame);
     firstFrame->frameID = allKeyFramesHistory.size();
@@ -2509,7 +2471,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame, FrameHessian*
     ef->insertFrame(firstFrame, &Hcalib);
     setPrecalcValues();
 
-    FrameHessian* firstFrameRight = coarseInitializer->firstRightFrame;
+    std::shared_ptr<FrameHessian> firstFrameRight = coarseInitializer->firstRightFrame;
     frameHessiansRight.push_back(firstFrameRight);
 
     firstFrame->pointHessians.reserve(wG[0] * hG[0] * 0.2f);
@@ -2541,14 +2503,14 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame, FrameHessian*
         }
 
         Pnt* point = coarseInitializer->points[0] + i;
-        ImmaturePoint* pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame, point->my_type, &Hcalib);
+        ImmaturePoint* pt = new ImmaturePoint(point->u + 0.5f, point->v + 0.5f, firstFrame.get(), point->my_type, &Hcalib);
 
         pt->u_stereo = pt->u;
         pt->v_stereo = pt->v;
         pt->idepth_min_stereo = 0;
         pt->idepth_max_stereo = NAN;
 
-        pt->traceStereo(firstFrameRight, K, 1);
+        pt->traceStereo(firstFrameRight->dI_ptr, K, 1);
 
 
         pt->idepth_min = pt->idepth_min_stereo;
@@ -2606,7 +2568,9 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame, FrameHessian*
     LOG_INFO("INITIALIZE FROM INITIALIZER (%d pts)!", (int)firstFrame->pointHessians.size());
 }
 
-void FullSystem::makeNewTraces(FrameHessian* newFrame, FrameHessian* newFrameRight, float* gtDepth)
+void FullSystem::makeNewTraces(std::shared_ptr<FrameHessian> newFrame,
+                               std::shared_ptr<FrameHessian> newFrameRight,
+                               float* gtDepth)
 {
     pixelSelector->allowFast = true;
     //int numPointsTotal = makePixelStatus(newFrame->dI, selectionMap, wG[0], hG[0], setting_desiredDensity);
@@ -2627,7 +2591,7 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, FrameHessian* newFrameRig
                 continue;
             }
 
-            ImmaturePoint* impt = new ImmaturePoint(x, y, newFrame, selectionMap[i], &Hcalib);
+            ImmaturePoint* impt = new ImmaturePoint(x, y, newFrame.get(), selectionMap[i], &Hcalib);
 
             if (!std::isfinite(impt->energyTH))
             {
@@ -2647,7 +2611,7 @@ void FullSystem::makeNewTraces(FrameHessian* newFrame, FrameHessian* newFrameRig
 
 void FullSystem::setPrecalcValues()
 {
-    for (FrameHessian* fh : frameHessians)
+    for (auto fh : frameHessians)
     {
         fh->targetPrecalc.resize(frameHessians.size());
 
@@ -2834,7 +2798,7 @@ void FullSystem::printFrameLifetimes()
     lg->open("logs/lifetimeLog.txt", std::ios::trunc | std::ios::out);
     lg->precision(15);
 
-    for (FrameShell* s : allFrameHistory)
+    for (auto& s : allFrameHistory)
     {
         (*lg) << s->id
               << " " << s->marginalizedAt

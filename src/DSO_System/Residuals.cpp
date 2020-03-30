@@ -96,7 +96,7 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 
     FrameFramePrecalc* precalc = &(host->targetPrecalc[target->idx]);
     float energyLeft = 0;
-    const Eigen::Vector3f* dIl = target->dI.ptr<Eigen::Vector3f>();
+    const Eigen::Vector3f* dIl = target->dI_ptr;
     //const float* const Il = target->I;
     const Mat33f& PRE_KRKiTll = precalc->PRE_KRKiTll;
     const Vec3f& PRE_KtTll = precalc->PRE_KtTll;

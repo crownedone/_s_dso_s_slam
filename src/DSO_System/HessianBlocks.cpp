@@ -222,7 +222,7 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
     }
 
     dI = dIp[0];
-
+    dI_ptr = dI.ptr<Eigen::Vector3f>();
 
     // make d0
     int w = wG[0];
@@ -284,7 +284,7 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
     }
 }
 
-void FrameFramePrecalc::set(FrameHessian* host, FrameHessian* target, CalibHessian* HCalib )
+void FrameFramePrecalc::set(std::shared_ptr<FrameHessian> host, std::shared_ptr<FrameHessian> target, CalibHessian* HCalib )
 {
     this->host = host;
     this->target = target;

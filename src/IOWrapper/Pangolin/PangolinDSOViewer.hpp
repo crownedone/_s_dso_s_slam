@@ -73,14 +73,14 @@ public:
 
 
     // ==================== Output3DWrapper Functionality ======================
-    virtual void publishGraph(const std::map<long, Eigen::Vector2i>& connectivity) override;
-    virtual void publishKeyframes( std::vector<FrameHessian*>& frames, bool final,
-                                   CalibHessian* HCalib) override;
-    virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib) override;
+    virtual void publishGraph(const std::map<uint64_t, Eigen::Vector2i>& connectivity) override;
+    virtual void publishKeyframes(const std::vector<std::shared_ptr<FrameHessian>>& frames, bool final,
+                                  CalibHessian* HCalib) override;
+    virtual void publishCamPose(std::shared_ptr<FrameShell> frame, CalibHessian* HCalib) override;
 
 
-    virtual void pushLiveFrame(FrameHessian* image) override;
-    virtual void pushStereoLiveFrame(FrameHessian* image, FrameHessian* image_right) override;
+    virtual void pushLiveFrame(std::shared_ptr<FrameHessian> image) override;
+    virtual void pushStereoLiveFrame(std::shared_ptr<FrameHessian> image, std::shared_ptr<FrameHessian> image_right) override;
     virtual void pushDepthImage(const cv::Mat& image) override;
     virtual bool needPushDepthImage() override;
 

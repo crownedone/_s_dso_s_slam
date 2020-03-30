@@ -64,23 +64,22 @@ void FullSystem::debugPlotTracking()
 
     int idx = 0;
 
-    for(FrameHessian* f : frameHessians)
+    for(auto& f : frameHessians)
     {
         std::vector<cv::Mat> images;
 
         // make images for all frames. will be deleted by the FrameHessian's destructor.
-        for(FrameHessian* f2 : frameHessians)
+        for(auto& f2 : frameHessians)
+        {
             if(f2->debugImage.empty())
             {
                 f2->debugImage = cv::Mat(hG[0], wG[0], CV_8UC3);
             }
 
-        for(FrameHessian* f2 : frameHessians)
-        {
             cv::Mat debugImage = f2->debugImage;
             images.push_back(debugImage);
 
-            Eigen::Vector3f* fd = f2->dI.ptr<Eigen::Vector3f>();
+            const Eigen::Vector3f* fd = f2->dI_ptr;
 
             Vec2 affL = AffLight::fromToVecExposure(f2->ab_exposure, f->ab_exposure, f2->aff_g2l(),
                                                     f->aff_g2l());
@@ -233,7 +232,7 @@ void FullSystem::debugPlot(std::string name)
         cv::Mat img(hG[0], wG[0], CV_8UC3);
         images.push_back(img);
         //float* fd = frameHessians[f]->I;
-        Eigen::Vector3f* fd = frameHessians[f]->dI.ptr<Eigen::Vector3f>();
+        const Eigen::Vector3f* fd = frameHessians[f]->dI_ptr;
 
 
         for(int i = 0; i < wh; i++)
@@ -509,7 +508,7 @@ void FullSystem::debugPlot(std::string name)
         for(unsigned int f = 0; f < frameHessians.size(); f++)
         {
             cv::Mat img(hG[0], wG[0], CV_8UC3);
-            Eigen::Vector3f* fd = frameHessians[f]->dI.ptr<Eigen::Vector3f>();
+            const Eigen::Vector3f* fd = frameHessians[f]->dI_ptr;
 
             for(int i = 0; i < wh; i++)
             {

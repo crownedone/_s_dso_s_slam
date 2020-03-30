@@ -151,19 +151,21 @@ public:
     virtual ~FullSystem();
 
     // adds a new frame, and creates point & residual structs.
-    void addActiveFrame(ImageAndExposure* image, int id);
-    void addActiveFrame(ImageAndExposure* image, ImageAndExposure* image_right, int id);
+    void addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id);
+    void addActiveFrame(std::shared_ptr<ImageAndExposure> image, std::shared_ptr<ImageAndExposure> image_right, int id);
 
     // marginalizes a frame. drops / marginalizes points & residuals.
-    void marginalizeFrame(FrameHessian* frame);
+    void marginalizeFrame(std::shared_ptr<FrameHessian> frame);
     void blockUntilMappingIsFinished();
 
     float optimize(int mnumOptIts);
 
     //compute stereo idepth
-    void stereoMatch(ImageAndExposure* image, ImageAndExposure* image_right, int id, cv::Mat& idepthMap);
+    void stereoMatch(std::shared_ptr<ImageAndExposure> image,
+                     std::shared_ptr<ImageAndExposure> image_right, int id,
+                     cv::Mat& idepthMap);
     // Mono
-    void traceNewCoarse(FrameHessian* fh);
+    void traceNewCoarse(std::shared_ptr<FrameHessian> fh);
 
     void printResult(std::string file);
 
@@ -172,7 +174,7 @@ public:
     void printFrameLifetimes();
     // contains pointers to active frames
 
-    std::vector<IOWrap::Output3DWrapper*> outputWrapper;
+    std::vector<std::shared_ptr<IOWrap::Output3DWrapper>> outputWrapper;
 
     bool isLost;
     bool initFailed;
@@ -197,20 +199,20 @@ private:
 
     double linAllPointSinle(PointHessian* point, float outlierTHSlack, bool plot);
 
-    void traceNewCoarseNonKey(FrameHessian* fh, FrameHessian* fh_right);
+    void traceNewCoarseNonKey(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right);
 
     // mainPipelineFunctions
-    Vec4 trackNewCoarse(FrameHessian* fh);
-    Vec4 trackNewCoarse(FrameHessian* fh, FrameHessian* fh_right);
-    void traceNewCoarseKey(FrameHessian* fh, FrameHessian* fh_right);
+    Vec4 trackNewCoarse(std::shared_ptr<FrameHessian> fh);
+    Vec4 trackNewCoarse(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right);
+    void traceNewCoarseKey(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right);
     void activatePoints();
     void activatePointsMT();
     void activatePointsOldFirst();
     void flagPointsForRemoval();
-    void makeNewTraces(FrameHessian* newFrame, FrameHessian* newFrameRight, float* gtDepth);
-    void initializeFromInitializer(FrameHessian* newFrame);
-    void initializeFromInitializer(FrameHessian* newFrame, FrameHessian* newFrame_right);
-    void flagFramesForMarginalization(FrameHessian* newFH);
+    void makeNewTraces(std::shared_ptr<FrameHessian> newFrame, std::shared_ptr<FrameHessian> newFrameRight, float* gtDepth);
+    void initializeFromInitializer(std::shared_ptr<FrameHessian> newFrame);
+    void initializeFromInitializer(std::shared_ptr<FrameHessian> newFrame, std::shared_ptr<FrameHessian> newFrame_right);
+    void flagFramesForMarginalization(std::shared_ptr<FrameHessian> newFH);
 
 
     void removeOutliers();
@@ -279,27 +281,27 @@ private:
 
     // =================== changed by tracker-thread. protected by trackMutex ============
     boost::mutex trackMutex;
-    std::vector<FrameShell*> allFrameHistory;
+    std::vector<std::shared_ptr<FrameShell>> allFrameHistory;
     CoarseInitializer* coarseInitializer;
     Vec5 lastCoarseRMSE;
 
 
     // ================== changed by mapper-thread. protected by mapMutex ===============
     boost::mutex mapMutex;
-    std::vector<FrameShell*> allKeyFramesHistory;
+    std::vector<std::shared_ptr<FrameShell>> allKeyFramesHistory;
 
-    EnergyFunctional* ef;
+    std::unique_ptr<EnergyFunctional> ef;
     IndexThreadReduce<Vec10> treadReduce;
 
-    float* selectionMap;
+    std::vector<float> selectionMap;
     PixelSelector* pixelSelector;
     CoarseDistanceMap* coarseDistanceMap;
 
-    std::vector<FrameHessian*> frameHessians;   // ONLY changed in marginalizeFrame and addFrame.
+    std::vector<std::shared_ptr<FrameHessian>> frameHessians;   // ONLY changed in marginalizeFrame and addFrame.
     std::vector<PointFrameResidual*> activeResiduals;
     float currentMinActDist;
 
-    std::vector<FrameHessian*> frameHessiansRight;
+    std::vector<std::shared_ptr<FrameHessian>> frameHessiansRight;
 
     std::vector<float> allResVec;
 
@@ -328,20 +330,20 @@ private:
         tracking always uses the newest KF as reference.
 
     */
-    void makeKeyFrame(FrameHessian* fh);
-    void makeKeyFrame(FrameHessian* fh, FrameHessian* fh_right);
-    void makeNonKeyFrame(FrameHessian* fh);
-    void makeNonKeyFrame(FrameHessian* fh, FrameHessian* fh_right);
-    void deliverTrackedFrame(FrameHessian* fh,  bool needKF);
-    void deliverTrackedFrame(FrameHessian* fh, FrameHessian* fh_right, bool needKF);
+    void makeKeyFrame(std::shared_ptr<FrameHessian> fh);
+    void makeKeyFrame(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right);
+    void makeNonKeyFrame(std::shared_ptr<FrameHessian> fh);
+    void makeNonKeyFrame(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right);
+    void deliverTrackedFrame(std::shared_ptr<FrameHessian> fh,  bool needKF);
+    void deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, std::shared_ptr<FrameHessian> fh_right, bool needKF);
     void mappingLoop();
 
     // tracking / mapping synchronization. All protected by [trackMapSyncMutex].
     boost::mutex trackMapSyncMutex;
     boost::condition_variable trackedFrameSignal;
     boost::condition_variable mappedFrameSignal;
-    std::deque<FrameHessian*> unmappedTrackedFrames;
-    std::deque<FrameHessian*> unmappedTrackedFrames_right;
+    std::deque<std::shared_ptr<FrameHessian>> unmappedTrackedFrames;
+    std::deque<std::shared_ptr<FrameHessian>> unmappedTrackedFrames_right;
     int needNewKFAfter; // Otherwise, a new KF is *needed that has ID bigger than [needNewKFAfter]*.
     boost::thread mappingThread;
     bool runMapping;

@@ -143,7 +143,7 @@ void CoarseTracker::makeK(CalibHessian* HCalib)
 }
 
 
-void CoarseTracker::makeCoarseDepthForFirstFrame(FrameHessian* fh)
+void CoarseTracker::makeCoarseDepthForFirstFrame(std::shared_ptr<FrameHessian> fh)
 {
     // make coarse tracking templates for latstRef.
     memset(idepth[0], 0, sizeof(float) * w[0] * h[0]);
@@ -155,7 +155,6 @@ void CoarseTracker::makeCoarseDepthForFirstFrame(FrameHessian* fh)
         int v = ph->v + 0.5f;
         float new_idepth = ph->idepth;
         float weight = sqrtf(1e-3 / (ph->efPoint->HdiF + 1e-12));
-
         idepth[0][u + w[0] * v] += new_idepth * weight;
         weightSums[0][u + w[0] * v] += weight;
 
@@ -357,20 +356,20 @@ void CoarseTracker::makeCoarseDepthForFirstFrame(FrameHessian* fh)
 
 }
 
-void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
+void CoarseTracker::makeCoarseDepthL0(std::vector<std::shared_ptr<FrameHessian>> frameHessians)
 {
     // make coarse tracking templates for latstRef.
     memset(idepth[0], 0, sizeof(float) * w[0] * h[0]);
     memset(weightSums[0], 0, sizeof(float) * w[0] * h[0]);
 
-    for (FrameHessian* fh : frameHessians)
+    for (auto fh : frameHessians)
     {
-        for (PointHessian* ph : fh->pointHessians)
+        for (auto ph : fh->pointHessians)
         {
             if (ph->lastResiduals[0].first != 0 && ph->lastResiduals[0].second == ResState::INP)
             {
                 PointFrameResidual* r = ph->lastResiduals[0].first;
-                assert(r->efResidual->isActive() && r->target == lastRef);
+                assert(r->efResidual->isActive() && r->target == lastRef.get());
                 int u = r->centerProjectedTo[0] + 0.5f;
                 int v = r->centerProjectedTo[1] + 0.5f;
                 float new_idepth = r->centerProjectedTo[2];
@@ -580,20 +579,21 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians)
 }
 
 // make depth mainly from static stereo matching and fill the holes from propogation idpeth map.
-void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians, FrameHessian* fh_right, CalibHessian Hcalib)
+void CoarseTracker::makeCoarseDepthL0(std::vector<std::shared_ptr<FrameHessian>> frameHessians,
+                                      std::shared_ptr<FrameHessian> fh_right, CalibHessian Hcalib)
 {
     // make coarse tracking templates for latstRef.
     memset(idepth[0], 0, sizeof(float) * w[0] * h[0]);
     memset(weightSums[0], 0, sizeof(float) * w[0] * h[0]);
 
-    FrameHessian* fh_target = frameHessians.back();
+    std::shared_ptr<FrameHessian> fh_target = frameHessians.back();
     Mat33f K1 = Mat33f::Identity();
     K1(0, 0) = Hcalib.fxl();
     K1(1, 1) = Hcalib.fyl();
     K1(0, 2) = Hcalib.cxl();
     K1(1, 2) = Hcalib.cyl();
 
-    for (FrameHessian* fh : frameHessians)
+    for (auto& fh : frameHessians)
     {
         for (PointHessian* ph : fh->pointHessians)
         {
@@ -602,11 +602,11 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians, 
                 ResState::INP) //contains information about residuals to the last two (!) frames. ([0] = latest, [1] = the one before).
             {
                 PointFrameResidual* r = ph->lastResiduals[0].first;
-                assert(r->efResidual->isActive() && r->target == lastRef);
+                assert(r->efResidual->isActive() && r->target == lastRef.get());
                 int u = r->centerProjectedTo[0] + 0.5f;
                 int v = r->centerProjectedTo[1] + 0.5f;
 
-                ImmaturePoint* pt_track = new ImmaturePoint((float)u, (float)v, fh_target, &Hcalib);
+                ImmaturePoint* pt_track = new ImmaturePoint((float)u, (float)v, fh_target.get(), &Hcalib);
 
                 pt_track->u_stereo = pt_track->u;
                 pt_track->v_stereo = pt_track->v;
@@ -615,13 +615,13 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians, 
                 pt_track->idepth_min_stereo = r->centerProjectedTo[2] * 0.1f;
                 pt_track->idepth_max_stereo = r->centerProjectedTo[2] * 1.9f;
 
-                ImmaturePointStatus pt_track_right = pt_track->traceStereo(fh_right, K1, 1);
+                ImmaturePointStatus pt_track_right = pt_track->traceStereo(fh_right->dI_ptr, K1, 1);
 
                 float new_idepth = 0;
 
                 if (pt_track_right == ImmaturePointStatus::IPS_GOOD)
                 {
-                    ImmaturePoint* pt_track_back = new ImmaturePoint(pt_track->lastTraceUV(0), pt_track->lastTraceUV(1), fh_right, &Hcalib);
+                    ImmaturePoint* pt_track_back = new ImmaturePoint(pt_track->lastTraceUV(0), pt_track->lastTraceUV(1), fh_right.get(), &Hcalib);
                     pt_track_back->u_stereo = pt_track_back->u;
                     pt_track_back->v_stereo = pt_track_back->v;
 
@@ -629,7 +629,7 @@ void CoarseTracker::makeCoarseDepthL0(std::vector<FrameHessian*> frameHessians, 
                     pt_track_back->idepth_min_stereo = r->centerProjectedTo[2] * 0.1f;
                     pt_track_back->idepth_max_stereo = r->centerProjectedTo[2] * 1.9f;
 
-                    ImmaturePointStatus pt_track_left = pt_track_back->traceStereo(fh_target, K1, 0);
+                    ImmaturePointStatus pt_track_left = pt_track_back->traceStereo(fh_target->dI_ptr, K1, 0);
 
                     float depth = 1.0f / pt_track->idepth_stereo;
                     float u_delta = abs(pt_track->u - pt_track_back->lastTraceUV(0));
@@ -928,6 +928,7 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88& H_out, Vec8& b_out, const SE3& ref
 
 Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, float cutoffTH)
 {
+    debugPlot = false;
     float E = 0;
     int numTermsInE = 0;
     int numTermsInWarped = 0;
@@ -942,9 +943,10 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
     float cyl = cy[lvl];
 
     Mat33f RKi = (refToNew.rotationMatrix().cast<float>() * Ki[lvl]);
-    // printf("the Ki is:\n %f,%f,%f\n %f,%f,%f\n %f,%f,%f\n -----\n",Ki[lvl](0,0), Ki[lvl](0,1), Ki[lvl](0,2), Ki[lvl](1,0), Ki[lvl](1,1), Ki[lvl](1,2), Ki[lvl](2,0), Ki[lvl](2,1), Ki[lvl](2,2) );
+    //LOG_INFO("the Ki is:\n %f,%f,%f\n %f,%f,%f\n %f,%f,%f\n -----\n", Ki[lvl](0, 0), Ki[lvl](0, 1), Ki[lvl](0, 2), Ki[lvl](1, 0),
+    //         Ki[lvl](1, 1), Ki[lvl](1, 2), Ki[lvl](2, 0), Ki[lvl](2, 1), Ki[lvl](2, 2) );
     Vec3f t = (refToNew.translation()).cast<float>();
-    // printf("the t is:\n %f, %f, %f\n", t(0),t(1),t(2)
+    //LOG_INFO("the t is:\n %f, %f, %f\n", t(0), t(1), t(2));
     Vec2f affLL = AffLight::fromToVecExposure(lastRef->ab_exposure, newFrame->ab_exposure,
                                               lastRef_aff_g2l, aff_g2l).cast<float>();
 
@@ -965,7 +967,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
     float* lpc_idepth = pc_idepth[lvl];
     float* lpc_color = pc_color[lvl];
 
-    //  printf("the num of the points is: %d \n", nl);
+    //LOG_INFO("the num of the points is: %d", nl);
+
     for(int i = 0; i < nl; i++)
     {
         float id = lpc_idepth[i];
@@ -978,7 +981,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
         float Ku = fxl * u + cxl;
         float Kv = fyl * v + cyl;
         float new_idepth = id / pt[2];
-        // printf("Ku & Kv are: %f, %f; x and y are: %f, %f\n", Ku, Kv, x, y);
+        //LOG_INFO("Ku & Kv are: %f, %f; x and y are: %f, %f", Ku, Kv, x, y);
 
         if(lvl == 0 && i % 32 == 0)
         {
@@ -1086,7 +1089,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
     if(debugPlot)
     {
         IOWrap::displayImage("RES", resImage, false);
-        IOWrap::waitKey(0);
+        IOWrap::waitKey(1);
     }
 
     Vec6 rs;
@@ -1100,7 +1103,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
     return rs;
 }
 
-void CoarseTracker::setCTRefForFirstFrame(std::vector<FrameHessian*> frameHessians)
+void CoarseTracker::setCTRefForFirstFrame(std::vector<std::shared_ptr<FrameHessian>> frameHessians)
 {
     assert(frameHessians.size() > 0);
     lastRef = frameHessians.back();
@@ -1114,7 +1117,7 @@ void CoarseTracker::setCTRefForFirstFrame(std::vector<FrameHessian*> frameHessia
 }
 
 void CoarseTracker::setCoarseTrackingRef(
-    std::vector<FrameHessian*> frameHessians)
+    std::vector<std::shared_ptr<FrameHessian>> frameHessians)
 {
     assert(frameHessians.size() > 0);
     lastRef = frameHessians.back();
@@ -1128,7 +1131,8 @@ void CoarseTracker::setCoarseTrackingRef(
     firstCoarseRMSE = -1;
 
 }
-void CoarseTracker::setCoarseTrackingRef(std::vector<FrameHessian*> frameHessians, FrameHessian* fh_right, CalibHessian Hcalib)
+void CoarseTracker::setCoarseTrackingRef(std::vector<std::shared_ptr<FrameHessian>> frameHessians,
+                                         std::shared_ptr<FrameHessian> fh_right, CalibHessian Hcalib)
 {
     assert(frameHessians.size() > 0);
     lastRef = frameHessians.back();
@@ -1142,7 +1146,7 @@ void CoarseTracker::setCoarseTrackingRef(std::vector<FrameHessian*> frameHessian
 
 }
 bool CoarseTracker::trackNewestCoarse(
-    FrameHessian* newFrameHessian,
+    std::shared_ptr<FrameHessian> newFrameHessian,
     SE3& lastToNew_out, AffLight& aff_g2l_out,
     int coarsestLvl,
     Vec5 minResForAbort,
@@ -1379,7 +1383,7 @@ bool CoarseTracker::trackNewestCoarse(
 
 
 void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
-                                       std::vector<IOWrap::Output3DWrapper*>& wraps)
+                                       std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps)
 {
     if(w[1] == 0)
     {
@@ -1516,7 +1520,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
 
         //IOWrap::displayImage("coarseDepth LVL0", &mf, false);
 
-        for(IOWrap::Output3DWrapper* ow : wraps)
+        for(auto& ow : wraps)
         {
             ow->pushDepthImage(mf);
         }
@@ -1533,7 +1537,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
 
 
 
-void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*>& wraps)
+void CoarseTracker::debugPlotIDepthMapFloat(std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps)
 {
     if(w[1] == 0)
     {
@@ -1543,7 +1547,7 @@ void CoarseTracker::debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*
     int lvl = 0;
     cv::Mat mim(h[lvl], w[lvl], CV_32F, idepth[lvl], cv::Mat::AUTO_STEP);
 
-    for(IOWrap::Output3DWrapper* ow : wraps)
+    for(auto& ow : wraps)
     {
         ow->pushDepthImageFloat(mim, lastRef);
     }
@@ -1569,8 +1573,8 @@ CoarseDistanceMap::CoarseDistanceMap(int ww, int hh)
     int fac = 1 << (pyrLevelsUsed - 1);
 
 
-    coarseProjectionGrid = new PointFrameResidual*[2048 * (ww * hh / (fac * fac))];
-    coarseProjectionGridNum = new int[ww * hh / (fac * fac)];
+    //coarseProjectionGrid = new PointFrameResidual*[2048 * (ww * hh / (fac * fac))];
+    //coarseProjectionGridNum = new int[ww * hh / (fac * fac)];
 
     w[0] = h[0] = 0;
 }
@@ -1579,8 +1583,8 @@ CoarseDistanceMap::~CoarseDistanceMap()
     delete[] fwdWarpedIDDistFinal;
     delete[] bfsList1;
     delete[] bfsList2;
-    delete[] coarseProjectionGrid;
-    delete[] coarseProjectionGridNum;
+    //delete[] coarseProjectionGrid;
+    //delete[] coarseProjectionGridNum;
 }
 
 
@@ -1588,8 +1592,8 @@ CoarseDistanceMap::~CoarseDistanceMap()
 
 
 void CoarseDistanceMap::makeDistanceMap(
-    std::vector<FrameHessian*> frameHessians,
-    FrameHessian* frame)
+    std::vector<std::shared_ptr<FrameHessian>> frameHessians,
+    std::shared_ptr<FrameHessian> frame)
 {
     int w1 = w[1];
     int h1 = h[1];
@@ -1604,9 +1608,9 @@ void CoarseDistanceMap::makeDistanceMap(
     // make coarse tracking templates for latstRef.
     int numItems = 0;
 
-    for(FrameHessian* fh : frameHessians)
+    for(auto& fh : frameHessians)
     {
-        if(frame == fh)
+        if(frame.get() == fh.get())
         {
             continue;
         }
@@ -1634,14 +1638,6 @@ void CoarseDistanceMap::makeDistanceMap(
     }
 
     growDistBFS(numItems);
-}
-
-
-
-
-void CoarseDistanceMap::makeInlierVotes(std::vector<FrameHessian*> frameHessians)
-{
-
 }
 
 

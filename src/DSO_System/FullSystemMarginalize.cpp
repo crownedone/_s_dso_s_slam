@@ -54,13 +54,13 @@ namespace dso
 
 
 
-void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
+void FullSystem::flagFramesForMarginalization(std::shared_ptr<FrameHessian> newFH)
 {
     if(setting_minFrameAge > setting_maxFrames)
     {
         for(int i = setting_maxFrames; i < (int)frameHessians.size(); i++)
         {
-            FrameHessian* fh = frameHessians[i - setting_maxFrames];
+            std::shared_ptr<FrameHessian> fh = frameHessians[i - setting_maxFrames];
             fh->flaggedForMarginalization = true;
         }
 
@@ -73,7 +73,7 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
     // marginalize all frames that have not enough points.
     for(int i = 0; i < (int)frameHessians.size(); i++)
     {
-        FrameHessian* fh = frameHessians[i];
+        auto fh = frameHessians[i];
         int in = fh->pointHessians.size() + fh->immaturePoints.size();
         int out = fh->pointHessiansMarginalized.size() + fh->pointHessiansOut.size();
 
@@ -110,11 +110,11 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
     if((int)frameHessians.size() - flagged >= setting_maxFrames)
     {
         double smallestScore = 1;
-        FrameHessian* toMarginalize = 0;
-        FrameHessian* latest = frameHessians.back();
+        std::shared_ptr<FrameHessian> toMarginalize = nullptr;
+        std::shared_ptr<FrameHessian> latest = frameHessians.back();
 
 
-        for(FrameHessian* fh : frameHessians)
+        for(auto& fh : frameHessians)
         {
             if(fh->frameID > latest->frameID - setting_minFrameAge || fh->frameID == 0)
             {
@@ -161,7 +161,7 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 
 
 
-void FullSystem::marginalizeFrame(FrameHessian* frame)
+void FullSystem::marginalizeFrame(std::shared_ptr<FrameHessian> frame)
 {
     // marginalize or remove all this frames points.
 
@@ -171,13 +171,18 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
     ef->marginalizeFrame(frame->efFrame);
 
     // drop all observations of existing points in that frame.
+    int posOfSame = -1;
+    int i = 0;
 
-    for(FrameHessian* fh : frameHessians)
+    for(std::shared_ptr<FrameHessian> fh : frameHessians)
     {
-        if(fh == frame)
+        if(fh.get() == frame.get())
         {
+            posOfSame = i;
             continue;
         }
+
+        i++;
 
         for(PointHessian* ph : fh->pointHessians)
         {
@@ -185,7 +190,7 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
             {
                 PointFrameResidual* r = ph->residuals[i];
 
-                if(r->target == frame)
+                if(r->target == frame.get())
                 {
                     if(ph->lastResiduals[0].first == r)
                     {
@@ -217,10 +222,10 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
 
 
     {
-        std::vector<FrameHessian*> v;
+        std::vector<std::shared_ptr<FrameHessian>> v;
         v.push_back(frame);
 
-        for(IOWrap::Output3DWrapper* ow : outputWrapper)
+        for(auto& ow : outputWrapper)
         {
             ow->publishKeyframes(v, true, &Hcalib);
         }
@@ -230,15 +235,32 @@ void FullSystem::marginalizeFrame(FrameHessian* frame)
     frame->shell->marginalizedAt = frameHessians.back()->shell->id;
     frame->shell->movedByOpt = frame->w2c_leftEps().norm();
 
-    deleteOutOrder<FrameHessian>(frameHessians, frame);
+
+//deleteOutOrder<std::shared_ptr<FrameHessian>>(frameHessians, frame);
+    auto it = frameHessians.begin();
+
+    if (posOfSame >= 0)
+    {
+        frameHessians.erase(it + posOfSame);
+    }
+    else
+    {
+        auto end = frameHessians.end();
+
+        for (; it != end; ++it)
+        {
+            if (frame.get() == it->get())
+            {
+                frameHessians.erase(it);
+                break;
+            }
+        }
+    }
 
     for(unsigned int i = 0; i < frameHessians.size(); i++)
     {
         frameHessians[i]->idx = i;
     }
-
-
-
 
     setPrecalcValues();
     ef->setAdjointsF(&Hcalib);

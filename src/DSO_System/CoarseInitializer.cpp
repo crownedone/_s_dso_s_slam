@@ -88,12 +88,13 @@ CoarseInitializer::~CoarseInitializer()
 }
 
 
-bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, FrameHessian* newFrameHessian_Right,
-                                   std::vector<IOWrap::Output3DWrapper*>& wraps)
+bool CoarseInitializer::trackFrame(std::shared_ptr<FrameHessian> newFrameHessian,
+                                   std::shared_ptr<FrameHessian> newFrameHessian_Right,
+                                   const std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps)
 {
     newFrame = newFrameHessian;
 
-    for (IOWrap::Output3DWrapper* ow : wraps)
+    for (auto& ow : wraps)
     {
         //ow->pushLiveFrame(newFrameHessian);
         ow->pushStereoLiveFrame(newFrameHessian, newFrameHessian_Right);
@@ -337,11 +338,11 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, FrameHessian* 
     return snapped && frameID > snappedAt + 1;
 }
 
-void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>& wraps)
+void CoarseInitializer::debugPlot(int lvl, const std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps)
 {
     bool needCall = false;
 
-    for(IOWrap::Output3DWrapper* ow : wraps)
+    for(auto& ow : wraps)
     {
         needCall = needCall || ow->needPushDepthImage();
     }
@@ -401,7 +402,7 @@ void CoarseInitializer::debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>
 
 
     //IOWrap::displayImage("idepth-R", &iRImg, false);
-    for(IOWrap::Output3DWrapper* ow : wraps)
+    for(auto& ow : wraps)
     {
         ow->pushDepthImage(iRImg);
     }
@@ -912,7 +913,8 @@ void CoarseInitializer::makeGradients(Eigen::Vector3f** data)
 
 
 // set first frame
-void CoarseInitializer::setFirstStereo(CalibHessian* HCalib, FrameHessian* newFrameHessian, FrameHessian* newFrameHessian_Right)
+void CoarseInitializer::setFirstStereo(CalibHessian* HCalib, std::shared_ptr<FrameHessian> newFrameHessian,
+                                       std::shared_ptr<FrameHessian> newFrameHessian_Right)
 {
 
     makeK(HCalib);
@@ -921,8 +923,8 @@ void CoarseInitializer::setFirstStereo(CalibHessian* HCalib, FrameHessian* newFr
 
     PixelSelector sel(w[0], h[0]);
 
-    float* statusMap = new float[w[0] * h[0]];
-    bool* statusMapB = new bool[w[0] * h[0]];
+    std::vector<float> statusMap(w[0] * h[0]);
+    std::vector<bool> statusMapB(w[0] * h[0]);
 
     Mat33f K = Mat33f::Identity();
     K(0, 0) = HCalib->fxl();
@@ -930,7 +932,7 @@ void CoarseInitializer::setFirstStereo(CalibHessian* HCalib, FrameHessian* newFr
     K(0, 2) = HCalib->cxl();
     K(1, 2) = HCalib->cyl();
 
-    float densities[] = { 0.03, 0.05, 0.15, 0.5, 1 };
+    float densities[] = { 0.03f, 0.05f, 0.15f, 0.5f, 1.f };
     memset(idepth[0], 0, sizeof(float) * w[0] * h[0]);
 
     for (int lvl = 0; lvl < pyrLevelsUsed; lvl++)
@@ -945,7 +947,8 @@ void CoarseInitializer::setFirstStereo(CalibHessian* HCalib, FrameHessian* newFr
         }
         else
         {
-            npts = makePixelStatus(firstFrame->dIp[lvl].ptr<Eigen::Vector3f>(), statusMapB, w[lvl], h[lvl], densities[lvl] * w[0] * h[0]);
+            npts = makePixelStatus(firstFrame->dIp[lvl].ptr<Eigen::Vector3f>(), statusMapB, w[lvl], h[lvl],
+                                   densities[lvl] * w[0] * h[0]);
         }
 
         if (points[lvl] != 0)
@@ -967,13 +970,13 @@ void CoarseInitializer::setFirstStereo(CalibHessian* HCalib, FrameHessian* newFr
                 if (lvl == 0 && statusMap[x + y * wl] != 0)
                 {
 
-                    ImmaturePoint* pt = new ImmaturePoint(x, y, firstFrame, statusMap[x + y * wl], HCalib);
+                    ImmaturePoint* pt = new ImmaturePoint(x, y, firstFrame.get(), statusMap[x + y * wl], HCalib);
 
                     pt->u_stereo = pt->u;
                     pt->v_stereo = pt->v;
                     pt->idepth_min_stereo = 0;
                     pt->idepth_max_stereo = NAN;
-                    ImmaturePointStatus stat = pt->traceStereo(firstRightFrame, K, 1);
+                    ImmaturePointStatus stat = pt->traceStereo(firstRightFrame->dI_ptr, K, 1);
 
                     if (stat == ImmaturePointStatus::IPS_GOOD)
                     {
@@ -1086,9 +1089,6 @@ void CoarseInitializer::setFirstStereo(CalibHessian* HCalib, FrameHessian* newFr
         numPoints[lvl] = nl;
     }
 
-    delete[] statusMap;
-    delete[] statusMapB;
-
     makeNN();
 
     thisToNext = SE3();
@@ -1102,7 +1102,7 @@ void CoarseInitializer::setFirstStereo(CalibHessian* HCalib, FrameHessian* newFr
 
 }
 
-void CoarseInitializer::setFirst(   CalibHessian* HCalib, FrameHessian* newFrameHessian)
+void CoarseInitializer::setFirst(CalibHessian* HCalib, std::shared_ptr<FrameHessian> newFrameHessian)
 {
 
     makeK(HCalib);
@@ -1110,8 +1110,8 @@ void CoarseInitializer::setFirst(   CalibHessian* HCalib, FrameHessian* newFrame
 
     PixelSelector sel(w[0], h[0]);
 
-    float* statusMap = new float[w[0]*h[0]];
-    bool* statusMapB = new bool[w[0]*h[0]];
+    std::vector<float> statusMap(w[0] * h[0]);
+    std::vector<bool> statusMapB(w[0] * h[0]);
 
     float densities[] = {0.03f, 0.05f, 0.15f, 0.5f, 1.f};
 
@@ -1190,9 +1190,6 @@ void CoarseInitializer::setFirst(   CalibHessian* HCalib, FrameHessian* newFrame
 
         numPoints[lvl] = nl;
     }
-
-    delete[] statusMap;
-    delete[] statusMapB;
 
     makeNN();
 

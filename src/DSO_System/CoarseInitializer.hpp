@@ -28,9 +28,9 @@
 #include "OptimizationBackend/MatrixAccumulators.hpp"
 #include "IOWrapper/Output3DWrapper.hpp"
 #include "util/settings.hpp"
-#include "vector"
+#include <vector>
 #include <math.h>
-
+#include <array>
 
 
 
@@ -83,10 +83,12 @@ public:
     CoarseInitializer(int w, int h);
     ~CoarseInitializer();
 
-    void setFirst(CalibHessian* HCalib, FrameHessian* newFrameHessian);
-    void setFirstStereo(CalibHessian* HCalib, FrameHessian* newFrameHessian, FrameHessian* newFrameHessian_Right);
-    bool trackFrame(FrameHessian* newFrameHessian, FrameHessian* newFrameHessian_Right, std::vector<IOWrap::Output3DWrapper*>& wraps);
-    void calcTGrads(FrameHessian* newFrameHessian);
+    void setFirst(CalibHessian* HCalib, std::shared_ptr<FrameHessian> newFrameHessian);
+    void setFirstStereo(CalibHessian* HCalib, std::shared_ptr<FrameHessian> newFrameHessian,
+                        std::shared_ptr<FrameHessian> newFrameHessian_Right);
+    bool trackFrame(std::shared_ptr<FrameHessian> newFrameHessian, std::shared_ptr<FrameHessian> newFrameHessian_Right,
+                    const std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps);
+    void calcTGrads(std::shared_ptr<FrameHessian> newFrameHessian);
 
     int frameID;
     bool fixAffine;
@@ -98,10 +100,10 @@ public:
     SE3 thisToNext;
 
 
-    FrameHessian* firstFrame;
-    FrameHessian* newFrame;
+    std::shared_ptr<FrameHessian> firstFrame;
+    std::shared_ptr<FrameHessian> newFrame;
 
-    FrameHessian* firstRightFrame;
+    std::shared_ptr<FrameHessian> firstRightFrame;
 private:
     Mat33 K[PYR_LEVELS];
     Mat33 Ki[PYR_LEVELS];
@@ -123,8 +125,8 @@ private:
     int snappedAt;
 
     // pyramid images & levels on all levels
-    Eigen::Vector3f* dINew[PYR_LEVELS];
-    Eigen::Vector3f* dIFist[PYR_LEVELS];
+    std::array<Eigen::Vector3f, PYR_LEVELS> dINew;
+    std::array<Eigen::Vector3f, PYR_LEVELS> dIFist;
 
     Eigen::DiagonalMatrix<float, 8> wM;
 
@@ -136,7 +138,7 @@ private:
     Accumulator9 acc9SC;
 
 
-    Vec3f dGrads[PYR_LEVELS];
+    std::array<Vec3f, PYR_LEVELS> dGrads;
 
     float alphaK;
     float alphaW;
@@ -162,7 +164,7 @@ private:
 
     void makeGradients(Eigen::Vector3f** data);
 
-    void debugPlot(int lvl, std::vector<IOWrap::Output3DWrapper*>& wraps);
+    void debugPlot(int lvl, const std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps);
     void makeNN();
 };
 

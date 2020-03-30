@@ -489,7 +489,7 @@ void PangolinDSOViewer::drawConstraints()
 
 
 
-void PangolinDSOViewer::publishGraph(const std::map<long, Eigen::Vector2i>& connectivity)
+void PangolinDSOViewer::publishGraph(const std::map<uint64_t, Eigen::Vector2i>& connectivity)
 {
     if(!setting_render_display3D)
     {
@@ -510,6 +510,7 @@ void PangolinDSOViewer::publishGraph(const std::map<long, Eigen::Vector2i>& conn
     {
         int host = (int)(p.first >> 32);
         int target = (int)(p.first & (uint64_t)0xFFFFFFFF);
+
 
         assert(host >= 0 && target >= 0);
 
@@ -550,7 +551,7 @@ void PangolinDSOViewer::publishGraph(const std::map<long, Eigen::Vector2i>& conn
     model3DMutex.unlock();
 }
 void PangolinDSOViewer::publishKeyframes(
-    std::vector<FrameHessian*>& frames,
+    const std::vector<std::shared_ptr<FrameHessian>>& frames,
     bool final,
     CalibHessian* HCalib)
 {
@@ -566,7 +567,7 @@ void PangolinDSOViewer::publishKeyframes(
 
     boost::unique_lock<boost::mutex> lk(model3DMutex);
 
-    for(FrameHessian* fh : frames)
+    for(auto fh : frames)
     {
         if(keyframesByKFID.find(fh->frameID) == keyframesByKFID.end())
         {
@@ -578,7 +579,7 @@ void PangolinDSOViewer::publishKeyframes(
         keyframesByKFID[fh->frameID]->setFromKF(fh, HCalib);
     }
 }
-void PangolinDSOViewer::publishCamPose(FrameShell* frame,
+void PangolinDSOViewer::publishCamPose(std::shared_ptr<FrameShell> frame,
                                        CalibHessian* HCalib)
 {
     if(!setting_render_display3D)
@@ -610,7 +611,7 @@ void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 }
 
 
-void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
+void PangolinDSOViewer::pushLiveFrame(std::shared_ptr<FrameHessian> image)
 {
     if (!setting_render_displayVideo)
     {
@@ -629,8 +630,8 @@ void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
         reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
             reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
                 reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
-                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.f :
-                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8f;
+                    image->dI_ptr[i][0] * 0.8 > 255.0f ? 255.f :
+                    image->dI_ptr[i][0] * 0.8f;
 
         reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][0] =
             reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][1] =
@@ -640,7 +641,7 @@ void PangolinDSOViewer::pushLiveFrame(FrameHessian* image)
     videoImgChanged = true;
 }
 
-void PangolinDSOViewer::pushStereoLiveFrame(FrameHessian* image, FrameHessian* image_right)
+void PangolinDSOViewer::pushStereoLiveFrame(std::shared_ptr<FrameHessian> image, std::shared_ptr<FrameHessian> image_right)
 {
     if (!setting_render_displayVideo)
     {
@@ -659,14 +660,14 @@ void PangolinDSOViewer::pushStereoLiveFrame(FrameHessian* image, FrameHessian* i
         reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
             reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
                 reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
-                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.f :
-                    image->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8f;
+                    image->dI_ptr[i][0] * 0.8 > 255.0f ? 255.f :
+                    image->dI_ptr[i][0] * 0.8f;
 
         reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][0] =
             reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][1] =
                 reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][2] =
-                    image_right->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8 > 255.0f ? 255.f :
-                    image_right->dI.ptr<Eigen::Vector3f>()[i][0] * 0.8f;
+                    image_right->dI_ptr[i][0] * 0.8 > 255.0f ? 255.f :
+                    image_right->dI_ptr[i][0] * 0.8f;
     }
 
     videoImgChanged = true;

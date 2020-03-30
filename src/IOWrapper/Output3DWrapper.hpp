@@ -130,7 +130,7 @@ public:
         Calling:
         Always called, no overhead if not used.
     */
-    virtual void publishGraph(const std::map<long, Eigen::Vector2i>& connectivity) {}
+    virtual void publishGraph(const std::map<uint64_t, Eigen::Vector2i>& connectivity) {}
 
 
 
@@ -149,7 +149,7 @@ public:
         Calling:
         Always called, negligible overhead if not used.
     */
-    virtual void publishKeyframes(std::vector<FrameHessian*>& frames, bool final,
+    virtual void publishKeyframes(const std::vector<std::shared_ptr<FrameHessian>>& frames, bool final,
                                   CalibHessian* HCalib) {}
 
 
@@ -162,7 +162,7 @@ public:
         Calling:
         Always called, no overhead if not used.
     */
-    virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib) {}
+    virtual void publishCamPose(std::shared_ptr<FrameShell> frame, CalibHessian* HCalib) {}
 
 
 
@@ -174,8 +174,8 @@ public:
         Calling:
         Always called, no overhead if not used.
     */
-    virtual void pushLiveFrame(FrameHessian* image) {}
-    virtual void pushStereoLiveFrame(FrameHessian* image, FrameHessian* image1) {}
+    virtual void pushLiveFrame(std::shared_ptr<FrameHessian> image) {}
+    virtual void pushStereoLiveFrame(std::shared_ptr<FrameHessian> image, std::shared_ptr<FrameHessian> image1) {}
 
 
 
@@ -201,7 +201,7 @@ public:
         Calling:
         Always called, almost no overhead if not used.
     */
-    virtual void pushDepthImageFloat(const cv::Mat& image, FrameHessian* KF ) {}
+    virtual void pushDepthImageFloat(const cv::Mat& image, std::shared_ptr<FrameHessian> KF ) {}
 
 
 

@@ -74,11 +74,11 @@ public:
 
 
     EFResidual* insertResidual(PointFrameResidual* r);
-    EFFrame* insertFrame(FrameHessian* fh, CalibHessian* Hcalib);
+    std::shared_ptr<EFFrame> insertFrame(std::shared_ptr<FrameHessian> fh, CalibHessian* Hcalib);
     EFPoint* insertPoint(PointHessian* ph);
 
     void dropResidual(EFResidual* r);
-    void marginalizeFrame(EFFrame* fh);
+    void marginalizeFrame(std::shared_ptr<EFFrame> fh);
     void removePoint(EFPoint* ph);
 
 
@@ -96,7 +96,7 @@ public:
 
     void setAdjointsF(CalibHessian* Hcalib);
 
-    std::vector<EFFrame*> frames;
+    std::vector<std::shared_ptr<EFFrame>> frames;
     int nPoints, nFrames, nResiduals;
 
     MatXX HM;
@@ -115,7 +115,7 @@ public:
     IndexThreadReduce<Vec10>* red;
 
 
-    std::map<long, Eigen::Vector2i> connectivityMap;
+    std::map<uint64_t, Eigen::Vector2i> connectivityMap;
 
 private:
 

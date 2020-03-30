@@ -85,7 +85,7 @@ int computeHistQuantil(int* hist, float below)
 }
 
 
-void PixelSelector::makeHists(const FrameHessian* const fh)
+void PixelSelector::makeHists(std::shared_ptr<const FrameHessian> fh)
 {
     gradHistFrame = fh;
     const float* mapmax0 = fh->absSquaredGrad[0].ptr<float>();
@@ -195,8 +195,8 @@ void PixelSelector::makeHists(const FrameHessian* const fh)
 }
 
 int PixelSelector::makeMaps(
-    const FrameHessian* const fh,
-    float* map_out, float density, int recursionsLeft, bool plot, float thFactor)
+    std::shared_ptr<const FrameHessian> fh,
+    std::vector<float>& map_out, float density, int recursionsLeft, bool plot, float thFactor)
 {
     float numHave = 0;
     float numWant = density;
@@ -236,7 +236,7 @@ int PixelSelector::makeMaps(
         // K / (pot+1)^2, where K is a scene-dependent constant.
         // we will allow sub-selecting pixels by up to a quotia of 0.25, otherwise we will re-select.
 
-        if(fh != gradHistFrame)
+        if(fh.get() != gradHistFrame.get())
         {
             makeHists(fh);
         }
@@ -336,7 +336,7 @@ int PixelSelector::makeMaps(
 
         for(int i = 0; i < w * h; i++)
         {
-            float c = fh->dI.ptr<Eigen::Vector3f>()[i][0] * 0.7;
+            float c = fh->dI_ptr[i][0] * 0.7;
 
             if(c > 255)
             {
@@ -377,11 +377,11 @@ int PixelSelector::makeMaps(
 
 
 
-Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
-                                      float* map_out, int pot, float thFactor)
+Eigen::Vector3i PixelSelector::select(std::shared_ptr<const FrameHessian> fh,
+                                      std::vector<float>& map_out, int pot, float thFactor)
 {
 
-    Eigen::Vector3f const* const map0 = fh->dI.ptr<Eigen::Vector3f>();
+    Eigen::Vector3f const* const map0 = fh->dI_ptr;
 
     const float* mapmax0 = fh->absSquaredGrad[0].ptr<float>();
     const float* mapmax1 = fh->absSquaredGrad[1].ptr<float>();
@@ -414,8 +414,7 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
         Vec2f(0.1951,   -0.9808)
     };
 
-    memset(map_out, 0, w * h * sizeof(PixelSelectorStatus));
-
+    memset(map_out.data(), 0, w * h * sizeof(PixelSelectorStatus));
 
 
     float dw1 = setting_gradDownweightPerLevel;
@@ -424,7 +423,8 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
 
     int n3 = 0, n2 = 0, n4 = 0;
 
-    for(int y4 = 0; y4 < h; y4 += (4 * pot)) for(int x4 = 0; x4 < w; x4 += (4 * pot))
+    for(int y4 = 0; y4 < h; y4 += (4 * pot))
+        for(int x4 = 0; x4 < w; x4 += (4 * pot))
         {
             int my3 = std::min((4 * pot), h - y4);
             int mx3 = std::min((4 * pot), w - x4);
@@ -432,7 +432,8 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
             float bestVal4 = 0;
             Vec2f dir4 = directions[randomPattern[n2] & 0xF];
 
-            for(int y3 = 0; y3 < my3; y3 += (2 * pot)) for(int x3 = 0; x3 < mx3; x3 += (2 * pot))
+            for(int y3 = 0; y3 < my3; y3 += (2 * pot))
+                for(int x3 = 0; x3 < mx3; x3 += (2 * pot))
                 {
                     int x34 = x3 + x4;
                     int y34 = y3 + y4;
@@ -442,7 +443,8 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
                     float bestVal3 = 0;
                     Vec2f dir3 = directions[randomPattern[n2] & 0xF];
 
-                    for(int y2 = 0; y2 < my2; y2 += pot) for(int x2 = 0; x2 < mx2; x2 += pot)
+                    for(int y2 = 0; y2 < my2; y2 += pot)
+                        for(int x2 = 0; x2 < mx2; x2 += pot)
                         {
                             int x234 = x2 + x34;
                             int y234 = y2 + y34;
@@ -452,7 +454,8 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
                             float bestVal2 = 0;
                             Vec2f dir2 = directions[randomPattern[n2] & 0xF];
 
-                            for(int y1 = 0; y1 < my1; y1 += 1) for(int x1 = 0; x1 < mx1; x1 += 1)
+                            for(int y1 = 0; y1 < my1; y1 += 1)
+                                for(int x1 = 0; x1 < mx1; x1 += 1)
                                 {
                                     assert(x1 + x234 < w);
                                     assert(y1 + y234 < h);

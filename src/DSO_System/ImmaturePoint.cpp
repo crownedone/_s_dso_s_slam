@@ -41,7 +41,7 @@ ImmaturePoint::ImmaturePoint(int u_, int v_, FrameHessian* host_, float type, Ca
         int dx = patternP[idx][0];
         int dy = patternP[idx][1];
 
-        Vec3f ptc = getInterpolatedElement33BiLin(host->dI.ptr<Eigen::Vector3f>(), u + dx, v + dy, wG[0]);
+        Vec3f ptc = getInterpolatedElement33BiLin(host->dI_ptr, u + dx, v + dy, wG[0]);
 
 
 
@@ -70,12 +70,14 @@ ImmaturePoint::ImmaturePoint(float u_, float v_, FrameHessian* host_, CalibHessi
 {
     gradH.setZero();  //Mat22f gradH
 
+    memset(color, 0, sizeof(float) * MAX_RES_PER_POINT);
+
     for (int idx = 0; idx < patternNum; idx++)
     {
         int dx = patternP[idx][0];
         int dy = patternP[idx][1];
 
-        Vec3f ptc = getInterpolatedElement33BiLin(host->dI.ptr<Eigen::Vector3f>(), u + dx, v + dy, wG[0]);
+        Vec3f ptc = getInterpolatedElement33BiLin(host->dI_ptr, u + dx, v + dy, wG[0]);
 
         color[idx] = ptc[0];
 
@@ -103,7 +105,7 @@ ImmaturePoint::~ImmaturePoint()
 
 
 // do static stereo match. if mode_right = true, it matches from left to right. otherwise do it from right to left.
-ImmaturePointStatus ImmaturePoint::traceStereo(FrameHessian* frame, Mat33f K, bool mode_right)
+ImmaturePointStatus ImmaturePoint::traceStereo(const Eigen::Vector3f* frame_ptr, Mat33f K, bool mode_right)
 {
     // KRKi
     Mat33f KRKi = Mat33f::Identity().cast<float>();
@@ -288,7 +290,7 @@ ImmaturePointStatus ImmaturePoint::traceStereo(FrameHessian* frame, Mat33f K, bo
         for (int idx = 0; idx < patternNum; idx++)
         {
 
-            float hitColor = getInterpolatedElement31(frame->dI.ptr<Eigen::Vector3f>(),
+            float hitColor = getInterpolatedElement31(frame_ptr,
                                                       (float)(ptx + rotatetPattern[idx][0]),
                                                       (float)(pty + rotatetPattern[idx][1]),
                                                       wG[0]);
@@ -353,7 +355,7 @@ ImmaturePointStatus ImmaturePoint::traceStereo(FrameHessian* frame, Mat33f K, bo
 
         for (int idx = 0; idx < patternNum; idx++)
         {
-            Vec3f hitColor = getInterpolatedElement33(frame->dI.ptr<Eigen::Vector3f>(),
+            Vec3f hitColor = getInterpolatedElement33(frame_ptr,
                                                       (float)(bestU + rotatetPattern[idx][0]),
                                                       (float)(bestV + rotatetPattern[idx][1]), wG[0]);
 
@@ -703,7 +705,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
         for(int idx = 0; idx < patternNum; idx++)
         {
-            float hitColor = getInterpolatedElement31(frame->dI.ptr<Eigen::Vector3f>(),
+            float hitColor = getInterpolatedElement31(frame->dI_ptr,
                                                       (float)(ptx + rotatetPattern[idx][0]),
                                                       (float)(pty + rotatetPattern[idx][1]),
                                                       wG[0]);
@@ -775,7 +777,7 @@ ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame, const Mat33f& ho
 
         for(int idx = 0; idx < patternNum; idx++)
         {
-            Vec3f hitColor = getInterpolatedElement33(frame->dI.ptr<Eigen::Vector3f>(),
+            Vec3f hitColor = getInterpolatedElement33(frame->dI_ptr,
                                                       (float)(bestU + rotatetPattern[idx][0]),
                                                       (float)(bestV + rotatetPattern[idx][1]), wG[0]);
 
@@ -943,7 +945,7 @@ float ImmaturePoint::calcResidual(
     FrameFramePrecalc* precalc = &(host->targetPrecalc[tmpRes->target->idx]);
 
     float energyLeft = 0;
-    const Eigen::Vector3f* dIl = tmpRes->target->dI.ptr<Eigen::Vector3f>();
+    const Eigen::Vector3f* dIl = tmpRes->target->dI_ptr;
     const Mat33f& PRE_KRKiTll = precalc->PRE_KRKiTll;
     const Vec3f& PRE_KtTll = precalc->PRE_KtTll;
     Vec2f affLL = precalc->PRE_aff_mode;
@@ -1001,7 +1003,7 @@ double ImmaturePoint::linearizeResidual(
     // check OOB due to scale angle change.
 
     float energyLeft = 0;
-    const Eigen::Vector3f* dIl = tmpRes->target->dI.ptr<Eigen::Vector3f>();
+    const Eigen::Vector3f* dIl = tmpRes->target->dI_ptr;
     const Mat33f& PRE_RTll = precalc->PRE_RTll;
     const Vec3f& PRE_tTll = precalc->PRE_tTll;
     //const float * const Il = tmpRes->target->I;

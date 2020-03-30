@@ -110,9 +110,8 @@ public:
         return bl;
     };
 
-    template<typename T>
-    ImageAndExposure* undistort(const cv::Mat& image_raw, float exposure = 0,
-                                double timestamp = 0, float factor = 1) const;
+    std::shared_ptr<ImageAndExposure> undistort(const cv::Mat& image_raw, float exposure = 0,
+                                                double timestamp = 0, float factor = 1) const;
     static Undistort* getUndistorterForFile(std::string configFilename, std::string gammaFilename,
                                             std::string vignetteFilename);
 

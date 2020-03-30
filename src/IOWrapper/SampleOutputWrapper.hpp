@@ -53,7 +53,7 @@ public:
         printf("OUT: Destroyed SampleOutputWrapper\n");
     }
 
-    virtual void publishGraph(const std::map<long, Eigen::Vector2i>& connectivity) override
+    virtual void publishGraph(const std::map<uint64_t, Eigen::Vector2i>& connectivity) override
     {
         printf("OUT: got graph with %d edges\n", (int)connectivity.size());
 
@@ -76,10 +76,10 @@ public:
 
 
 
-    virtual void publishKeyframes( std::vector<FrameHessian*>& frames, bool final,
-                                   CalibHessian* HCalib) override
+    virtual void publishKeyframes(const std::vector<std::shared_ptr<FrameHessian>>& frames, bool final,
+                                  CalibHessian* HCalib) override
     {
-        for(FrameHessian* f : frames)
+        for(auto& f : frames)
         {
             printf("OUT: KF %d (%s) (id %d, tme %f): %d active, %d marginalized, %d immature points. CameraToWorld:\n",
                    f->frameID,
@@ -107,7 +107,7 @@ public:
         }
     }
 
-    virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib) override
+    virtual void publishCamPose(std::shared_ptr<FrameShell> frame, CalibHessian* HCalib) override
     {
         printf("OUT: Current Frame %d (time %f, internal ID %d). CameraToWorld:\n",
                frame->incoming_id,
@@ -117,7 +117,7 @@ public:
     }
 
 
-    virtual void pushLiveFrame(FrameHessian* image) override
+    virtual void pushLiveFrame(std::shared_ptr<FrameHessian> image) override
     {
         // can be used to get the raw image / intensity pyramid.
     }
@@ -131,7 +131,7 @@ public:
         return false;
     }
 
-    virtual void pushDepthImageFloat(const cv::Mat& image, FrameHessian* KF ) override
+    virtual void pushDepthImageFloat(const cv::Mat& image, std::shared_ptr<FrameHessian> KF ) override
     {
         printf("OUT: Predicted depth for KF %d (id %d, time %f, internal frame-ID %d). CameraToWorld:\n",
                KF->frameID,

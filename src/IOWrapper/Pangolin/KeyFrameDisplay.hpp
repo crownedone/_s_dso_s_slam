@@ -73,11 +73,11 @@ public:
 
     // copies points from KF over to internal buffer,
     // keeping some additional information so we can render it differently.
-    void setFromKF(FrameHessian* fh, CalibHessian* HCalib);
+    void setFromKF(std::shared_ptr<FrameHessian> fh, CalibHessian* HCalib);
 
     // copies points from KF over to internal buffer,
     // keeping some additional information so we can render it differently.
-    void setFromF(FrameShell* fs, CalibHessian* HCalib);
+    void setFromF(std::shared_ptr<FrameShell> fs, CalibHessian* HCalib);
 
     // copies & filters internal data to GL buffer for rendering. if nothing to do: does nothing.
     bool refreshPC(bool canRefresh, float scaledTH, float absTH, int mode, float minBS, int sparsity);

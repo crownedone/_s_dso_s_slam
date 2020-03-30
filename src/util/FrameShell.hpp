@@ -41,7 +41,7 @@ public:
 
     // set once after tracking
     SE3 camToTrackingRef;
-    FrameShell* trackingRef;
+    std::shared_ptr<FrameShell> trackingRef;
 
     // constantly adapted.
     SE3 camToWorld;             // Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].

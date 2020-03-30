@@ -108,6 +108,9 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     EFPoint(PointHessian* d, EFFrame* host_) : data(d), host(host_)
     {
+        // just a guess...
+        priorF = deltaF = idxInPoints = bdSumF = HdiF = Hdd_accLF = bd_accLF = Hdd_accAF = bd_accAF = 0;
+
         takeData();
         stateFlag = EFPointStatus::PS_GOOD;
     }
@@ -147,7 +150,7 @@ class EFFrame
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    EFFrame(FrameHessian* d) : data(d)
+    EFFrame(std::shared_ptr<FrameHessian> d) : data(d)
     {
         takeData();
     }
@@ -161,7 +164,7 @@ public:
 
 
     std::vector<EFPoint*> points;
-    FrameHessian* data;
+    std::shared_ptr<FrameHessian> data;
     int idx;    // idx in frames.
 
     int frameID;

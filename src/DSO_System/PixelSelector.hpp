@@ -46,19 +46,19 @@ class PixelSelector
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     int makeMaps(
-        const FrameHessian* const fh,
-        float* map_out, float density, int recursionsLeft = 1, bool plot = false, float thFactor = 1);
+        std::shared_ptr<const FrameHessian> fh,
+        std::vector<float>& map_out, float density, int recursionsLeft = 1, bool plot = false, float thFactor = 1);
 
     PixelSelector(int w, int h);
     ~PixelSelector();
     int currentPotential;
 
     bool allowFast;
-    void makeHists(const FrameHessian* const fh);
+    void makeHists(std::shared_ptr<const FrameHessian> const fh);
 private:
 
-    Eigen::Vector3i select(const FrameHessian* const fh,
-                           float* map_out, int pot, float thFactor = 1);
+    Eigen::Vector3i select(std::shared_ptr<const FrameHessian> fh,
+                           std::vector<float>& map_out, int pot, float thFactor = 1);
 
 
     unsigned char* randomPattern;
@@ -68,16 +68,16 @@ private:
     float* ths;
     float* thsSmoothed;
     int thsStep;
-    const FrameHessian* gradHistFrame;
+    std::shared_ptr<const FrameHessian> gradHistFrame;
 };
 
 
 
 template<int pot>
-inline int gridMaxSelection(Eigen::Vector3f* grads, bool* map_out, int w, int h, float THFac)
+inline int gridMaxSelection(Eigen::Vector3f* grads, std::vector<bool>& map_out, int w, int h, float THFac)
 {
 
-    memset(map_out, 0, sizeof(bool)*w * h);
+    map_out = std::vector<bool>(w * h, false);
 
     int numGood = 0;
 
@@ -138,49 +138,50 @@ inline int gridMaxSelection(Eigen::Vector3f* grads, bool* map_out, int w, int h,
                     }
                 }
 
-            bool* map0 = map_out + x + y * w;
+            // Bool is implemented in bits in std::vector
+            int idx = x + y * w;
 
             if(bestXXID >= 0)
             {
-                if(!map0[bestXXID])
+                if(!map_out[idx + bestXXID])
                 {
                     numGood++;
                 }
 
-                map0[bestXXID] = true;
+                map_out[idx + bestXXID] = true;
 
             }
 
             if(bestYYID >= 0)
             {
-                if(!map0[bestYYID])
+                if(!map_out[idx + bestYYID])
                 {
                     numGood++;
                 }
 
-                map0[bestYYID] = true;
+                map_out[idx + bestYYID] = true;
 
             }
 
             if(bestXYID >= 0)
             {
-                if(!map0[bestXYID])
+                if(!map_out[idx + bestXYID])
                 {
                     numGood++;
                 }
 
-                map0[bestXYID] = true;
+                map_out[idx + bestXYID] = true;
 
             }
 
             if(bestYXID >= 0)
             {
-                if(!map0[bestYXID])
+                if(!map_out[idx + bestYXID])
                 {
                     numGood++;
                 }
 
-                map0[bestYXID] = true;
+                map_out[idx + bestYXID] = true;
 
             }
         }
@@ -190,11 +191,11 @@ inline int gridMaxSelection(Eigen::Vector3f* grads, bool* map_out, int w, int h,
 }
 
 
-inline int gridMaxSelection(Eigen::Vector3f* grads, bool* map_out, int w, int h, int pot,
+inline int gridMaxSelection(Eigen::Vector3f* grads, std::vector<bool>& map_out, int w, int h, int pot,
                             float THFac)
 {
 
-    memset(map_out, 0, sizeof(bool)*w * h);
+    map_out = std::vector<bool>(w * h, false);
 
     int numGood = 0;
 
@@ -255,49 +256,50 @@ inline int gridMaxSelection(Eigen::Vector3f* grads, bool* map_out, int w, int h,
                     }
                 }
 
-            bool* map0 = map_out + x + y * w;
+            // Bool is implemented in bits in std::vector
+            int idx = x + y * w;
 
             if(bestXXID >= 0)
             {
-                if(!map0[bestXXID])
+                if(!map_out[idx + bestXXID])
                 {
                     numGood++;
                 }
 
-                map0[bestXXID] = true;
+                map_out[idx + bestXXID] = true;
 
             }
 
             if(bestYYID >= 0)
             {
-                if(!map0[bestYYID])
+                if(!map_out[idx + bestYYID])
                 {
                     numGood++;
                 }
 
-                map0[bestYYID] = true;
+                map_out[idx + bestYYID] = true;
 
             }
 
             if(bestXYID >= 0)
             {
-                if(!map0[bestXYID])
+                if(!map_out[idx + bestXYID])
                 {
                     numGood++;
                 }
 
-                map0[bestXYID] = true;
+                map_out[idx + bestXYID] = true;
 
             }
 
             if(bestYXID >= 0)
             {
-                if(!map0[bestYXID])
+                if(!map_out[idx + bestYXID])
                 {
                     numGood++;
                 }
 
-                map0[bestYXID] = true;
+                map_out[idx + bestYXID] = true;
 
             }
         }
@@ -307,7 +309,7 @@ inline int gridMaxSelection(Eigen::Vector3f* grads, bool* map_out, int w, int h,
 }
 
 
-inline int makePixelStatus(Eigen::Vector3f* grads, bool* map, int w, int h, float desiredDensity,
+inline int makePixelStatus(Eigen::Vector3f* grads, std::vector<bool>& map, int w, int h, float desiredDensity,
                            int recsLeft = 5, float THFac = 1)
 {
     if(sparsityFactor < 1)

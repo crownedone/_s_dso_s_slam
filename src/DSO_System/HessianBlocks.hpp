@@ -78,8 +78,8 @@ struct FrameFramePrecalc
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     // static values
     static int instanceCounter;
-    FrameHessian* host; // defines row
-    FrameHessian* target;   // defines column
+    std::shared_ptr<FrameHessian> host; // defines row
+    std::shared_ptr<FrameHessian> target;   // defines column
 
     // precalc values
     Mat33f PRE_RTll;
@@ -100,9 +100,9 @@ struct FrameFramePrecalc
     inline ~FrameFramePrecalc() {}
     inline FrameFramePrecalc()
     {
-        host = target = 0;
+        host = target = nullptr;
     }
-    void set(FrameHessian* host, FrameHessian* target, CalibHessian* HCalib);
+    void set(std::shared_ptr<FrameHessian> host, std::shared_ptr<FrameHessian> target, CalibHessian* HCalib);
 };
 
 
@@ -112,12 +112,13 @@ struct FrameFramePrecalc
 struct FrameHessian
 {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    EFFrame* efFrame;
+    std::shared_ptr<EFFrame> efFrame;
 
     // constant info & pre-calculated values
     //DepthImageWrap* frame;
-    FrameShell* shell;
+    std::shared_ptr<FrameShell> shell;
 
+    const Eigen::Vector3f* dI_ptr; // Pointer access to dI.
     cv::Mat dI;                                     // trace, fine tracking. Used for direction select (not for gradient histograms etc.)
     std::array<cv::Mat, PYR_LEVELS>
     dIp;            // coarse tracking / coarse initializer. NAN in [0] only.
@@ -267,7 +268,7 @@ struct FrameHessian
         frameID = -1;
         efFrame = 0;
         frameEnergyTH = 8 * 8 * patternNum;
-
+        dI_ptr = nullptr;
         debugImage = 0;
     };
 
@@ -553,8 +554,8 @@ struct PointHessian
     }
 
 
-    inline bool isOOB(const std::vector<FrameHessian*>& toKeep,
-                      const std::vector<FrameHessian*>& toMarg) const
+    inline bool isOOB(const std::vector<std::shared_ptr<FrameHessian>>& toKeep,
+                      const std::vector<std::shared_ptr<FrameHessian>>& toMarg) const
     {
 
         int visInToMarg = 0;
@@ -566,8 +567,8 @@ struct PointHessian
                 continue;
             }
 
-            for(FrameHessian* k : toMarg)
-                if(r->target == k)
+            for(auto& k : toMarg)
+                if(r->target == k.get())
                 {
                     visInToMarg++;
                 }
