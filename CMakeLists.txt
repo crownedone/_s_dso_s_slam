@@ -70,6 +70,8 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 #cross project files
 set(SYS
+    ${PROJECT_SOURCE_DIR}/src/OpenCL/OpenCLHelper.hpp
+    ${PROJECT_SOURCE_DIR}/src/OpenCL/KERNELS.hpp
     ${PROJECT_SOURCE_DIR}/src/StopWatch.cpp
     ${PROJECT_SOURCE_DIR}/src/StopWatch.hpp
     ${PROJECT_SOURCE_DIR}/src/Logging.hpp

@@ -1105,7 +1105,7 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
         LOG_INFO("Baseline: %f \n", bl);
         /// Stereo
         // original is 1.0. 0.3 is a balance between speed and accuracy. if tracking lost, set this para higher
-        //setting_kfGlobalWeight = 1.0;
+        setting_kfGlobalWeight = 2.7;
         setting_desiredImmatureDensity = 3000; // original is 1500 immature points per frame
         setting_desiredPointDensity = 4000; // original is 2000
         //setting_maxShiftWeightT = 0.04f * (640 + 128);   // original is 0.04f * (640+480); this para is depend on the crop size.

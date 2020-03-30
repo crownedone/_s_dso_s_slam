@@ -148,7 +148,7 @@ void settingsDefault(int preset)
         // Go back to previous values
         setting_desiredImmatureDensity = 1500;
         setting_desiredPointDensity = 2000;
-        setting_kfGlobalWeight = 1.0;
+        setting_kfGlobalWeight = 2.7;
 
         setting_logStuff = true;
     }
