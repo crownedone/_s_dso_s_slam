@@ -149,6 +149,9 @@ extern float setting_minGradHistAdd;
 extern float setting_gradDownweightPerLevel;
 extern bool  setting_selectDirectionDistribution;
 
+//// OPENCL Kernel usage! ////
+extern bool setting_UseOpenCL;
+////
 
 
 extern float setting_trace_stepsize;

@@ -155,7 +155,10 @@ float setting_gradDownweightPerLevel = 0.75;
 bool  setting_selectDirectionDistribution = true;
 
 
+//// OPENCL Kernel usage! ////
+bool setting_UseOpenCL = true;
 
+////
 
 
 

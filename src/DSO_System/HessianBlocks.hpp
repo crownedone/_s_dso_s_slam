@@ -458,6 +458,12 @@ struct CalibHessian
         return B[c + 1] - B[c];
     }
 
+    // Need access to the whole matrix
+    EIGEN_STRONG_INLINE float* getB()
+    {
+        return B;
+    }
+
     EIGEN_STRONG_INLINE float getBInvGradOnly(float color)
     {
         int c = static_cast<int>(color + 0.5f);

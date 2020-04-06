@@ -56,10 +56,12 @@
 #include "IOWrapper/SampleOutputWrapper.hpp"
 
 #include "IOWrapper/Input.hpp"
+#include <opencv2/core/ocl.hpp>
 
 // Path to the sequence folder.
 DEFINE_string(sequenceFolder, "", "path to your sequence Folder");
-DEFINE_bool(runQuiet, false, "Disable debug output");
+DEFINE_bool(runQuiet, true, "Disable debug output");
+DEFINE_bool(dsoGPU, false, "USE GPU Calculation");
 
 DEFINE_int32(preset, 0,
              "0 - DEFAULT settings : \n"\
@@ -180,6 +182,66 @@ void settingsDefault(int preset)
     LOG_INFO("==============================================\n");
 }
 
+
+void initializeOpenCL()
+{
+    assert(cv::ocl::haveOpenCL());
+    auto m_Context = cv::ocl::Context();
+    auto m_Queue = cv::ocl::Queue();
+    bool hasSVM = cv::ocl::haveSVM();
+
+    try
+    {
+        // prefer GPU context:
+        m_Context.create(cv::ocl::Device::TYPE_ALL);
+
+        if (m_Context.ndevices() <= 0)
+        {
+            LOG_WARNING("No OpenCL device(s) found");
+            m_Context = cv::ocl::Context::getDefault();
+            m_Queue = cv::ocl::Queue::getDefault();
+        }
+        else
+        {
+            int idx = 0;
+            LOG_INFO("Found %d OpenCL Devices:", m_Context.ndevices());
+
+            for (int i = 0; i < m_Context.ndevices(); ++i)
+            {
+                cv::ocl::Device dev = m_Context.device(i);
+                LOG_INFO("(%s, %s, %s)",
+                         dev.name().c_str(),
+                         dev.OpenCLVersion().c_str(), dev.OpenCL_C_Version().c_str());
+
+                // We prefer intel:
+                if (dev.isIntel())
+                {
+                    idx = i;
+                }
+            }
+
+            LOG_INFO("Selected: Device(Name, OclVer, OclCVer) = (%s, %s, %s)",
+                     m_Context.device(idx).name().c_str(),
+                     m_Context.device(idx).OpenCLVersion().c_str(),
+                     m_Context.device(idx).OpenCL_C_Version().c_str());
+            // Select this device globally as c (Contexts) Default device.
+            cv::ocl::Device(m_Context.device(idx));
+            m_Queue.cv::ocl::Queue::create(m_Context, m_Context.device(idx));
+        }
+    }
+    catch (std::exception& e)
+    {
+        LOG_ERROR("OCL init error %s", e.what());
+    }
+
+    // Set specific Context and queue as static for the whole environment!
+    cv::ocl::Context::getDefault(false) = std::move(m_Context);
+    cv::ocl::Queue::getDefault() = std::move(m_Queue);
+
+    //Context = cv::ocl::Context::getDefault(false);
+    //Queue = cv::ocl::Queue::getDefault();
+    //Context.setUseSVM(hasSVM); // Use SVM if avaialable
+};
 int main( int argc, char** argv )
 {
     // Init google logging
@@ -203,7 +265,14 @@ int main( int argc, char** argv )
         exit(1);
     }
 
+    setting_UseOpenCL = FLAGS_dsoGPU;
     setting_debugout_runquiet = FLAGS_runQuiet;
+
+    if (FLAGS_dsoGPU)
+    {
+        initializeOpenCL();
+    }
+
 
     settingsDefault(FLAGS_preset);
 

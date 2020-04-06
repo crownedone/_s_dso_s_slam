@@ -1,11 +1,16 @@
 #pragma once
 
 #include <string>
+#include "OpenCLHelper.hpp"
 
-
+namespace dso
+{
+namespace OCLKernels
+{
 static const std::string KernelHessian = "__kernel void hessian(			    \
         __global const float* restrict input,					                \
         const int kwidth,											            \
+        const int kheight,											            \
         __global       float* restrict out3f,                                   \
         __global       float* restrict outAbsGrad)							    \
         {																	    \
@@ -21,14 +26,14 @@ static const std::string KernelHessian = "__kernel void hessian(			    \
             float color = input[u_out + v_out * kwidth];                                                                               \
                                                                                                                                        \
             /* Hesse Calculation: */                                                                                                   \
-            float dx = 0.f;                                                                                                            \
-            float dy = 0.f;                                                                                                            \
+            float dx = 0.0f;                                                                                                            \
+            float dy = 0.0f;                                                                                                            \
                                                                                                                                        \
             /* Only inside the borders of the image (go from v = 1 to v = height - 2) */                                               \
             if (v_out > 0 && v_out < kheight - 1)                                                                                      \
             {                                                                                                                          \
-                dx = .5f * (input[u_out + 1 + v_out * kwidth] - input[u_out - 1 + v_out * kwidth]);                                    \
-                dy = .5f * (input[u_out + (v_out + 1) * kwidth] - input[u_out + (v_out - 1) * kwidth]);                                \
+                dx = 0.5f * (input[u_out + 1 + v_out * kwidth] - input[u_out - 1 + v_out * kwidth]);                                    \
+                dy = 0.5f * (input[u_out + (v_out + 1) * kwidth] - input[u_out + (v_out - 1) * kwidth]);                                \
             }                                                                                                                          \
                                                                                                                                        \
             out3f[3 * (u_out + v_out * kwidth) + 0] = color;                                                                           \
@@ -64,7 +69,7 @@ static const std::string KernelBGrad = "__kernel void bGrad(			                 
 static const std::string KernelPyrDown = "__kernel void pyrDown(			                        \
         __global const float* restrict inputf,					                                    \
         const int kwidth,											                                \
-        __global const float* restrict outf,                                                        \
+        __global       float* restrict outf,                                                        \
         int inputWidth)                                                                             \
         {                                                                                           \
             int u_out = get_global_id(0);                                                           \
@@ -85,3 +90,6 @@ static const std::string KernelPyrDown = "__kernel void pyrDown(			             
                                                     inputf[u_in0 + v_in1 * inputWidth] +            \
                                                     inputf[u_in1 + v_in1 * inputWidth]);            \
         }";
+
+}
+}

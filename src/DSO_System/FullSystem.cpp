@@ -42,7 +42,7 @@
 #include "DSO_system/PixelSelector.hpp"
 #include "DSO_system/ResidualProjections.hpp"
 #include "DSO_system/ImmaturePoint.hpp"
-
+#include "OpenCL/KERNELS.hpp"
 #include "DSO_system/CoarseTracker.hpp"
 #include "DSO_system/CoarseInitializer.hpp"
 
@@ -55,7 +55,6 @@
 #include "StopWatch.hpp"
 
 #include <cmath>
-
 /**
     This file is part of DSO.
 
@@ -97,7 +96,6 @@ int CalibHessian::instanceCounter = 0;
 
 FullSystem::FullSystem()
 {
-
     int retstat = 0;
 
     if (setting_logStuff)
@@ -840,7 +838,7 @@ Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh)
 
     if (!setting_debugout_runquiet)
     {
-        LOG_ERROR("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
+        LOG_INFO("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
     }
 
 
@@ -866,6 +864,7 @@ void FullSystem::stereoMatch(std::shared_ptr<ImageAndExposure> image,
                              std::shared_ptr<ImageAndExposure> image_right, int id,
                              cv::Mat& idepthMap)
 {
+    StopWatch sw;
     // =========================== add into allFrameHistory =========================
     auto fh = std::make_shared<FrameHessian>();
     auto fh_right = std::make_shared<FrameHessian>();
@@ -883,6 +882,8 @@ void FullSystem::stereoMatch(std::shared_ptr<ImageAndExposure> image,
     fh->makeImages(image->image, &Hcalib);
     fh_right->ab_exposure = image_right->exposure_time;
     fh_right->makeImages(image_right->image, &Hcalib);
+
+    LOG_INFO("MakeImages: %f [ms]", sw.stop());
 
     Mat33f K = Mat33f::Identity();
     K(0, 0) = Hcalib.fxl();
@@ -943,8 +944,8 @@ void FullSystem::stereoMatch(std::shared_ptr<ImageAndExposure> image,
     //    for(int i = 0; i < error.size(); i++)
     //        std::cout << error[i].first << " " << error[i].second.first << " " << error[i].second.second << std::endl;
 
-    std::cout << " frameID " << id << " got good matches " << counter << std::endl;
-
+    LOG_INFO("frameID %d got good matches %d", id, counter);
+    LOG_INFO("AddFrame: %f [ms]", sw.stop());
     return;
 }
 
@@ -1745,7 +1746,7 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
 
     boost::unique_lock<boost::mutex> lock(trackMutex);
 
-
+    StopWatch sw;
     // =========================== add into allFrameHistory =========================
     auto fh = std::make_shared<FrameHessian>();
     auto shell = std::make_shared<FrameShell>();
@@ -1762,7 +1763,7 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
     fh->ab_exposure = image->exposure_time;
     fh->makeImages(image->image, &Hcalib);
 
-
+    LOG_INFO("MakeImages: %f [ms]", sw.stop());
 
 
     if (!initialized)
@@ -1845,6 +1846,8 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
 
         lock.unlock();
         deliverTrackedFrame(fh, needToMakeKF);
+
+        LOG_INFO("Add frame: %f [ms]", sw.stop());
         return;
     }
 }

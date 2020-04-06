@@ -29,6 +29,8 @@
 #include "OptimizationBackend/EnergyFunctionalStructs.hpp"
 #include <Eigen/LU>
 #include <opencv2/imgproc.hpp>
+#include "StopWatch.hpp"
+#include <OpenCL/KERNELS.hpp>
 
 namespace dso
 {
@@ -148,137 +150,215 @@ void FrameHessian::release()
     immaturePoints.clear();
 }
 
+cv::ocl::ProgramSource KERNEL_makeImages_bGrad;
+cv::ocl::ProgramSource KERNEL_makeImages_hessian;
+cv::ocl::ProgramSource KERNEL_makeImages_pyrDown;
+cv::Mat B;
+cv::UMat BUMat;
 
 void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
 {
-    //cv::Mat zero(hG[0], wG[0], CV_32FC1, cv::Scalar(0.f));
-    //std::vector<cv::Mat> arr = { color, zero, zero };
-    //cv::merge(arr, dIp[0]);
-    //absSquaredGrad[0] = cv::Mat(hG[0], wG[0], CV_32FC1);
-
-    //for(int i = 1; i < pyrLevelsUsed; i++)
-    //{
-    //    dIp[i] = cv::Mat(hG[i], wG[i], CV_32FC3);
-    //    absSquaredGrad[i] = cv::Mat(hG[i], wG[i], CV_32FC1);
-    //}
-
-    //dI = dIp[0];
-
-    //// make d0
-    //int w = wG[0];
-    //int h = hG[0];
-
-    //for(int lvl = 0; lvl < pyrLevelsUsed; lvl++)
-    //{
-    //    int wl = wG[lvl], hl = hG[lvl];
-    //    Eigen::Vector3f* dI_l = dIp[lvl].ptr<Eigen::Vector3f>();
-
-    //    float* dabs_l = absSquaredGrad[lvl].ptr<float>();
-
-    //    if(lvl > 0)
-    //    {
-    //        int lvlm1 = lvl - 1;
-    //        cv::resize(dIp[lvlm1], dIp[lvl], dIp[lvl].size(), 0.0, 0.0, cv::InterpolationFlags::INTER_LINEAR);
-    //    }
-
-    //    for(int idx = wl; idx < wl * (hl - 1); idx++)
-    //    {
-    //        float dx = 0.5f * (dI_l[idx + 1][0] - dI_l[idx - 1][0]);
-    //        float dy = 0.5f * (dI_l[idx + wl][0] - dI_l[idx - wl][0]);
-
-
-    //        if(!std::isfinite(dx))
-    //        {
-    //            dx = 0;
-    //        }
-
-    //        if(!std::isfinite(dy))
-    //        {
-    //            dy = 0;
-    //        }
-
-    //        dI_l[idx][1] = dx;
-    //        dI_l[idx][2] = dy;
-
-    //        dabs_l[idx] = dx * dx + dy * dy;
-
-    //        if(setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
-    //        {
-    //            float gw = HCalib->getBGradOnly((float)(dI_l[idx][0]));
-    //            dabs_l[idx] *= gw * gw; // convert to gradient of original color space (before removing response).
-    //        }
-    //    }
-    //}
-
-    cv::Mat zero(hG[0], wG[0], CV_32FC1, cv::Scalar(0.f));
-    std::vector<cv::Mat> arr = { color, zero, zero };
-    cv::merge(arr, dIp[0]);
-    absSquaredGrad[0] = cv::Mat(hG[0], wG[0], CV_32FC1);
-
-    for(int i = 1; i < pyrLevelsUsed; i++)
+    if (setting_UseOpenCL)
     {
-        dIp[i] = cv::Mat(hG[i], wG[i], CV_32FC3);
-        absSquaredGrad[i] = cv::Mat(hG[i], wG[i], CV_32FC1);
-    }
-
-    dI = dIp[0];
-    dI_ptr = dI.ptr<Eigen::Vector3f>();
-
-    // make d0
-    int w = wG[0];
-    int h = hG[0];
-
-    for (int lvl = 0; lvl < pyrLevelsUsed; lvl++)
-    {
-        int wl = wG[lvl], hl = hG[lvl];
-        Eigen::Vector3f* dI_l = dIp[lvl].ptr<Eigen::Vector3f>();
-
-        float* dabs_l = absSquaredGrad[lvl].ptr<float>();
-
-        if (lvl > 0)
+        // First time create kernels
+        if (!KERNEL_makeImages_hessian.getImpl())
         {
-            int lvlm1 = lvl - 1;
-            int wlm1 = wG[lvlm1];
-            Eigen::Vector3f* dI_lm = dIp[lvlm1].ptr<Eigen::Vector3f>();
-
-
-
-            for (int y = 0; y < hl; y++)
-                for (int x = 0; x < wl; x++)
-                {
-                    dI_l[x + y * wl][0] = 0.25f * (dI_lm[2 * x + 2 * y * wlm1][0] +
-                                                   dI_lm[2 * x + 1 + 2 * y * wlm1][0] +
-                                                   dI_lm[2 * x + 2 * y * wlm1 + wlm1][0] +
-                                                   dI_lm[2 * x + 1 + 2 * y * wlm1 + wlm1][0]);
-                }
+            KERNEL_makeImages_bGrad = cv::ocl::ProgramSource("makeImages", "bGrad", OCLKernels::KernelBGrad, "");
+            KERNEL_makeImages_hessian = cv::ocl::ProgramSource("makeImages", "hessian", OCLKernels::KernelHessian, "");
+            KERNEL_makeImages_pyrDown = cv::ocl::ProgramSource("makeImages", "pyrDown", OCLKernels::KernelPyrDown, "");
         }
 
-        for (int idx = wl; idx < wl * (hl - 1); idx++)
+        assert(KERNEL_makeImages_hessian.getImpl());
+        assert(KERNEL_makeImages_bGrad.getImpl());
+        assert(KERNEL_makeImages_pyrDown.getImpl());
+
+
+        // Initialize on GPU:
+        std::vector<cv::UMat> colorUMat;
+        std::vector<cv::UMat> dIpUMat;
+        std::vector<cv::UMat> absSquaredGradUMat;
+
+        //
+        if (BUMat.empty() && setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
         {
-            float dx = 0.5f * (dI_l[idx + 1][0] - dI_l[idx - 1][0]);
-            float dy = 0.5f * (dI_l[idx + wl][0] - dI_l[idx - wl][0]);
+            float* BB = HCalib->getB();
+            // Wrap Mat around the memory of BGrad (only for upload)
+            B = cv::Mat(1, 256, CV_32FC1, BB, cv::Mat::AUTO_STEP);
+            // Upload
+            B.copyTo(BUMat);
+        }
 
+        for (int i = 0; i < pyrLevelsUsed; i++)
+        {
+            int w = color.cols / std::pow(2, i);
+            int h = color.rows / std::pow(2, i);
+            colorUMat.push_back(cv::UMat(h, w, CV_32FC1, cv::UMatUsageFlags::USAGE_DEFAULT));
+            dIpUMat.push_back(cv::UMat(h, w, CV_32FC3, cv::UMatUsageFlags::USAGE_DEFAULT));
+            absSquaredGradUMat.push_back(cv::UMat(h, w, CV_32FC1,
+                                                  cv::UMatUsageFlags::USAGE_DEFAULT));
+        }
 
-            if (!std::isfinite(dx))
+        // Upload the color image:
+        color.copyTo(colorUMat[0]);
+
+        bool ksuccess = true;
+
+        for (int lvl = 0; lvl < pyrLevelsUsed; ++lvl)
+        {
+            // Run pyr Down kernel
+            if (lvl > 0)
             {
-                dx = 0;
+                int kwidth = colorUMat[lvl].cols;
+                int kheight = colorUMat[lvl].rows;
+                int inputWidth = colorUMat[lvl - 1].cols;
+
+                ksuccess &= RunKernel("pyrDown", KERNEL_makeImages_pyrDown,
+                {
+                    cv::ocl::KernelArg::PtrReadOnly(colorUMat[lvl - 1]),
+                    cv::ocl::KernelArg::Constant(&kwidth, sizeof(int)),
+                    cv::ocl::KernelArg::PtrWriteOnly(colorUMat[lvl]),
+                    cv::ocl::KernelArg::Constant(&inputWidth, sizeof(int))
+                },
+                { (size_t)(kwidth), (size_t)(kheight), (size_t)(0) },
+                2, // Only use 2 dimensions (width, height)
+                false);
+
+                if (!ksuccess)
+                {
+                    LOG_ERROR("Kernel makeImages:pyrDown run error");
+                    exit(1);
+                }
+
             }
 
-            if (!std::isfinite(dy))
+            int kwidth = colorUMat[lvl].cols;
+            int kheight = colorUMat[lvl].rows;
+            ksuccess &= RunKernel("hessian", KERNEL_makeImages_hessian,
             {
-                dy = 0;
+                cv::ocl::KernelArg::PtrReadOnly(colorUMat[lvl]),
+                cv::ocl::KernelArg::Constant(&kwidth, sizeof(int)),
+                cv::ocl::KernelArg::Constant(&kheight, sizeof(int)),
+                cv::ocl::KernelArg::PtrWriteOnly(dIpUMat[lvl]),
+                cv::ocl::KernelArg::PtrWriteOnly(absSquaredGradUMat[lvl])
+            },
+            { (size_t)(kwidth), (size_t)(kheight), (size_t)(0) },
+            2, // Only use 2 dimensions (width, height)
+            false);
+
+            if (!ksuccess)
+            {
+                LOG_ERROR("Kernel makeImages:hessian run error");
+                exit(1);
             }
 
-            dI_l[idx][1] = dx;
-            dI_l[idx][2] = dy;
-
-
-            dabs_l[idx] = dx * dx + dy * dy;
-
-            if (setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
+            // Only if needed (if input has BGrad):
+            if (!BUMat.empty() && setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
             {
-                float gw = HCalib->getBGradOnly((float)(dI_l[idx][0]));
-                dabs_l[idx] *= gw * gw; // convert to gradient of original color space (before removing response).
+                ksuccess &= RunKernel("bGrad", KERNEL_makeImages_bGrad,
+                {
+                    cv::ocl::KernelArg::PtrReadOnly(dIpUMat[lvl]),              // input3f
+                    cv::ocl::KernelArg::PtrReadWrite(absSquaredGradUMat[lvl]),   // inputAbsGrad
+                    cv::ocl::KernelArg::Constant(&kwidth, sizeof(int)),         // kwidth
+                    cv::ocl::KernelArg::PtrReadOnly(BUMat)
+                },
+                { (size_t)(kwidth), (size_t)(kheight), (size_t)(0) },
+                2, // Only use 2 dimensions (width, height)
+                false);
+
+                if (!ksuccess)
+                {
+                    LOG_ERROR("Kernel makeImages:bGrad run error");
+                    exit(1);
+                }
+            }
+        }
+
+        // Download Everything:
+        for (int lvl = 0; lvl < pyrLevelsUsed; ++lvl)
+        {
+            // CopyTo 'dowloads' the Mat from GPU memory to the desired location.
+            dIpUMat[lvl].copyTo(dIp[lvl]);
+            absSquaredGradUMat[lvl].copyTo(absSquaredGrad[lvl]);
+        }
+
+        // some pointer stuff needs setup here:
+        dI = dIp[0];
+        dI_ptr = dI.ptr<Eigen::Vector3f>();
+    }
+    else
+    {
+        cv::Mat zero(hG[0], wG[0], CV_32FC1, cv::Scalar(0.f));
+        std::vector<cv::Mat> arr = { color, zero, zero };
+        cv::merge(arr, dIp[0]);
+        absSquaredGrad[0] = cv::Mat(hG[0], wG[0], CV_32FC1);
+
+        for(int i = 1; i < pyrLevelsUsed; i++)
+        {
+            dIp[i] = cv::Mat(hG[i], wG[i], CV_32FC3);
+            absSquaredGrad[i] = cv::Mat(hG[i], wG[i], CV_32FC1);
+        }
+
+        dI = dIp[0];
+        dI_ptr = dI.ptr<Eigen::Vector3f>();
+
+        // make d0
+        int w = wG[0];
+        int h = hG[0];
+
+        for (int lvl = 0; lvl < pyrLevelsUsed; lvl++)
+        {
+            int wl = wG[lvl], hl = hG[lvl];
+            Eigen::Vector3f* dI_l = dIp[lvl].ptr<Eigen::Vector3f>();
+
+            float* dabs_l = absSquaredGrad[lvl].ptr<float>();
+
+            if (lvl > 0)
+            {
+                int lvlm1 = lvl - 1;
+                int wlm1 = wG[lvlm1];
+                Eigen::Vector3f* dI_lm = dIp[lvlm1].ptr<Eigen::Vector3f>();
+
+
+
+                for (int y = 0; y < hl; y++)
+                    for (int x = 0; x < wl; x++)
+                    {
+                        dI_l[x + y * wl][0] = 0.25f * (dI_lm[2 * x + 2 * y * wlm1][0] +
+                                                       dI_lm[2 * x + 1 + 2 * y * wlm1][0] +
+                                                       dI_lm[2 * x + 2 * y * wlm1 + wlm1][0] +
+                                                       dI_lm[2 * x + 1 + 2 * y * wlm1 + wlm1][0]);
+                        dI_l[x + y * wl][1] = 0.f;
+                        dI_l[x + y * wl][2] = 0.f;
+                    }
+            }
+
+            for (int idx = wl; idx < wl * (hl - 1); idx++)
+            {
+                float dx = 0.5f * (dI_l[idx + 1][0] - dI_l[idx - 1][0]);
+                float dy = 0.5f * (dI_l[idx + wl][0] - dI_l[idx - wl][0]);
+
+
+                if (!std::isfinite(dx))
+                {
+                    dx = 0;
+                }
+
+                if (!std::isfinite(dy))
+                {
+                    dy = 0;
+                }
+
+                dI_l[idx][1] = dx;
+                dI_l[idx][2] = dy;
+
+
+                dabs_l[idx] = dx * dx + dy * dy;
+
+                if (setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
+                {
+                    float gw = HCalib->getBGradOnly((float)(dI_l[idx][0]));
+                    dabs_l[idx] *= gw * gw; // convert to gradient of original color space (before removing response).
+                }
             }
         }
     }
