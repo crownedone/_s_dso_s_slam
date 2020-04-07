@@ -14,7 +14,7 @@ struct FramePack
 {
     FramePack() : timestamp(0.0), exposure(1.f), timestamp_slave1(0.0), exposure_slave1(1.f), id(0) {};
 
-    cv::Mat frame;
+    cv::Mat frame; // grayscale frame
     cv::Mat frame_slave1;
     cv::Mat depthFrame;
 

@@ -108,11 +108,6 @@ namespace IOWrap
 */
 
 
-
-
-
-
-
 class Output3DWrapper
 {
 public:

@@ -50,17 +50,17 @@ if (Pangolin_FOUND)
     include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/Pangolin/include)
     include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/Pangolin/build/src/include)
     include_directories(${PROJECT_SOURCE_DIR}/Thirdparty/Pangolin/build/external/glew/include)
-    set(dso_pangolin_SOURCE_FILES 
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.cpp
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/KeyFrameDisplay.hpp
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.cpp
-      ${PROJECT_SOURCE_DIR}/src/IOWrapper/Pangolin/PangolinDSOViewer.hpp)
-    source_group("Pangolin" FILES ${dso_pangolin_SOURCE_FILES})
+    set(pangolin_SOURCE_FILES 
+      ${PROJECT_SOURCE_DIR}/src/Pangolin/KeyFrameDisplay.cpp
+      ${PROJECT_SOURCE_DIR}/src/Pangolin/KeyFrameDisplay.hpp
+      ${PROJECT_SOURCE_DIR}/src/Pangolin/PangolinViewer.cpp
+      ${PROJECT_SOURCE_DIR}/src/Pangolin/PangolinViewer.hpp)
+    source_group("Pangolin" FILES ${pangolin_SOURCE_FILES})
     set(HAS_PANGOLIN 1)
 else ()
     message("--- could not find PANGOLIN, not compiling dso_pangolin library.")
     message("    this means there will be no 3D display / GUI available.")
-    set(dso_pangolin_SOURCE_FILES )
+    set(pangolin_SOURCE_FILES )
     set(HAS_PANGOLIN 0)
 endif ()
 
@@ -75,6 +75,8 @@ set(SYS
     ${PROJECT_SOURCE_DIR}/src/StopWatch.cpp
     ${PROJECT_SOURCE_DIR}/src/StopWatch.hpp
     ${PROJECT_SOURCE_DIR}/src/Logging.hpp
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Output3D.hpp # generalized 3D output
+    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Output3D.cpp # generalized 3D output
 ) 
 source_group("sys" FILES ${SYS})
 set(INPUT_OUTPUT
@@ -83,9 +85,6 @@ set(INPUT_OUTPUT
     ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_mono_tum.cpp
     ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_rgbd_tum.cpp
     ${PROJECT_SOURCE_DIR}/src/IOWrapper/Input_stereo.cpp
-
-    #${PROJECT_SOURCE_DIR}/src/IOWrapper/Output.hpp
-    #${PROJECT_SOURCE_DIR}/src/IOWrapper/Output.cpp
 )
 source_group("IO" FILES ${INPUT_OUTPUT})
 
@@ -161,8 +160,8 @@ src/ORB_SLAM2_System/Sim3Solver.hpp
 src/ORB_SLAM2_System/Sim3Solver.cpp
 src/ORB_SLAM2_System/Initializer.hpp
 src/ORB_SLAM2_System/Initializer.cpp
-src/ORB_SLAM2_System/Viewer.hpp
-src/ORB_SLAM2_System/Viewer.cpp
+#src/ORB_SLAM2_System/Viewer.hpp
+#src/ORB_SLAM2_System/Viewer.cpp
 )
 source_group("System" FILES ${ORB_SLAM_SRC})
 
@@ -172,7 +171,7 @@ add_dependencies(${ORB_SLAM} DBoW2)
 target_link_libraries(${ORB_SLAM}
 ${OpenCV_LIBS}
 ${EIGEN3_LIBS}
-${Pangolin_LIBRARIES}
+#${Pangolin_LIBRARIES}
 DBoW2
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/bin/g2o.lib
 glog::glog
@@ -231,13 +230,6 @@ set(dso_OPTBACK
     ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/RawResidualJacobian.hpp
 )
 source_group("OptimizationBackend" FILES ${dso_OPTBACK})
-set(dso_IO
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageDisplay.cpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/ImageDisplay.hpp
-    ${PROJECT_SOURCE_DIR}/src/IOWrapper/Output3DWrapper.hpp
-    #${PROJECT_SOURCE_DIR}/src/IOWrapper/SampleOutputWrapper.hpp
-)
-source_group("IOWrapper" FILES ${dso_IO})
 
 # Sources files
 set(dso_SOURCE_FILES
@@ -246,7 +238,6 @@ set(dso_SOURCE_FILES
   ${dso_OPTBACK}
   ${dso_FULLSYSTEM}
   ${dso_SYS}
-  ${dso_IO}
 )
 
 set(dso_TESTS
@@ -279,7 +270,7 @@ SuiteSparse::amd SuiteSparse::btf SuiteSparse::klu SuiteSparse::ldl
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 # Main Executable
-add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp ${INPUT_OUTPUT} ${dso_pangolin_SOURCE_FILES})
+add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp ${INPUT_OUTPUT} ${pangolin_SOURCE_FILES})
 target_link_libraries(exe_DSO_SLAM ${DSO} ${ORB_SLAM} ${Pangolin_LIBRARIES} gflags)
 add_dependencies(exe_DSO_SLAM ${DSO} ${ORB_SLAM})
 

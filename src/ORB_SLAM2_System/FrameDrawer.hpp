@@ -30,7 +30,10 @@
 
 #include<mutex>
 
-
+namespace Viewer
+{
+class Output3D;
+}
 namespace ORB_SLAM2
 {
 
@@ -40,7 +43,7 @@ class Viewer;
 class FrameDrawer
 {
 public:
-    FrameDrawer(Map* pMap);
+    FrameDrawer(Map* pMap, std::shared_ptr<::Viewer::Output3D> viewer = nullptr);
 
     // Update info from the last processed frame.
     void Update(Tracking* pTracker);
@@ -66,6 +69,8 @@ protected:
     Map* mpMap;
 
     std::mutex mMutex;
+
+    std::shared_ptr<::Viewer::Output3D> mpViewer;
 };
 
 } //namespace ORB_SLAM

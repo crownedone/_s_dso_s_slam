@@ -26,11 +26,11 @@
 #pragma once
 #include "util/settings.hpp"
 #include "util/NumType.hpp"
-#include "IOWrapper/ImageDisplay.hpp"
 #include "fstream"
 #include <opencv2/core/matx.hpp>
 #include <cmath>
 #include <opencv2/highgui/highgui.hpp>
+#include <Eigen/core>
 
 namespace dso
 {

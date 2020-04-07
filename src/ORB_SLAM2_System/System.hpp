@@ -27,26 +27,28 @@
 #include<opencv2/core/core.hpp>
 
 #include "Tracking.hpp"
-#include "FrameDrawer.hpp"
-#include "MapDrawer.hpp"
 #include "Map.hpp"
 #include "LocalMapping.hpp"
 #include "LoopClosing.hpp"
 #include "KeyFrameDatabase.hpp"
 #include "ORBVocabulary.hpp"
-#include "Viewer.hpp"
 
 #define usleep(X) std::this_thread::sleep_for(std::chrono::microseconds((int)X));
+
+namespace Viewer
+{
+class Output3D;
+}
 
 namespace ORB_SLAM2
 {
 
-class Viewer;
-class FrameDrawer;
 class Map;
 class Tracking;
 class LocalMapping;
 class LoopClosing;
+class FrameDrawer;
+class MapDrawer;
 
 class System
 {
@@ -63,7 +65,7 @@ public:
 
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
     System(const string& strVocFile, const string& strSettingsFile, const eSensor sensor,
-           const bool bUseViewer = true);
+           std::shared_ptr<::Viewer::Output3D> viewer = nullptr);
 
     // Proccess the given stereo frame. Images must be synchronized and rectified.
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
@@ -153,7 +155,9 @@ private:
     LoopClosing* mpLoopCloser;
 
     // The viewer draws the map and the current camera pose. It uses Pangolin.
-    Viewer* mpViewer;
+    //Viewer* mpViewer;
+
+    std::shared_ptr<::Viewer::Output3D> mpViewer;
 
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;

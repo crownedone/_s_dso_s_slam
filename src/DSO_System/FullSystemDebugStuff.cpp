@@ -34,7 +34,7 @@
 #include "util/globalFuncs.hpp"
 #include <Eigen/LU>
 #include <algorithm>
-#include "IOWrapper/ImageDisplay.hpp"
+#include "IOWrapper/Output3D.hpp"
 #include "util/globalCalib.hpp"
 #include <Eigen/SVD>
 #include <Eigen/Eigenvalues>
@@ -120,14 +120,13 @@ void FullSystem::debugPlotTracking()
             }
         }
 
-
         char buf[100];
         snprintf(buf, 100, "IMG %d", idx);
-        IOWrap::displayImageStitch(buf, images);
+        Viewer::displayImageStitch(buf, images);
         idx++;
     }
 
-    IOWrap::waitKey(0);
+    Viewer::waitKey(0);
 
 }
 
@@ -500,8 +499,8 @@ void FullSystem::debugPlot(std::string name)
         }
     }
 
-    IOWrap::displayImageStitch(name.c_str(), images);
-    IOWrap::waitKey(5);
+    Viewer::displayImageStitch(name.c_str(), images);
+    Viewer::waitKey(5);
 
     if((debugSaveImages && false))
     {

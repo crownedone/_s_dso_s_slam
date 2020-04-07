@@ -21,7 +21,7 @@
     along with DSO. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
+#include <ORB_SLAM2_System/System.hpp>
 #include "util/Input.hpp"
 #include "util/Undistort.hpp"
 
@@ -34,9 +34,7 @@
 #include <gflags/gflags.h>
 #include <Logging.hpp>
 
-#include "IOWrapper/Output3DWrapper.hpp"
-#include "IOWrapper/ImageDisplay.hpp"
-
+#include "IOWrapper/Output3D.hpp"
 
 #include <boost/thread.hpp>
 #include "util/settings.hpp"
@@ -52,14 +50,15 @@
 // Read input
 #include <boost/filesystem.hpp>
 
-#include "IOWrapper/Pangolin/PangolinDSOViewer.hpp"
-#include "IOWrapper/SampleOutputWrapper.hpp"
+#include "Pangolin/PangolinViewer.hpp"
 
 #include "IOWrapper/Input.hpp"
 #include <opencv2/core/ocl.hpp>
 
 // Path to the sequence folder.
 DEFINE_string(sequenceFolder, "", "path to your sequence Folder");
+DEFINE_string(orbVocab, "", "ORB-Vocabulary");
+DEFINE_string(orbSettings, "", "ORB-Settings yaml");
 DEFINE_bool(runQuiet, true, "Disable debug output");
 DEFINE_bool(dsoGPU, false, "USE GPU Calculation");
 
@@ -315,23 +314,26 @@ int main( int argc, char** argv )
         exit(1);
     }
 
-    int lstart = start;
-    int lend = end;
+    std::shared_ptr<Viewer::PangolinViewer> viewer = nullptr;
 
+    if(!disableAllDisplay)
+    {
+        viewer = std::make_shared<Viewer::PangolinViewer>(wG[0], hG[0]);
+        // viewer->start(); // viewer thread start
+    }
+
+    auto orbSystem = std::make_unique<ORB_SLAM2::System>(FLAGS_orbVocab, FLAGS_orbSettings, ORB_SLAM2::System::MONOCULAR, viewer);
     std::unique_ptr<FullSystem> fullSystem = std::make_unique<FullSystem>();
     fullSystem->setGammaFunction(photometricGamma);
     fullSystem->linearizeOperation = (playbackSpeed == 0);
 
-    std::shared_ptr<IOWrap::PangolinDSOViewer> viewer = nullptr;
-
-    if(!disableAllDisplay)
+    if(viewer)
     {
-        viewer = std::make_shared<IOWrap::PangolinDSOViewer>(wG[0], hG[0], false);
         fullSystem->outputWrapper.push_back(viewer);
     }
 
     int id = 0;
-    input.onFrame.connect([ =, &id, &fullSystem](std::shared_ptr<const IO::FramePack> frame)
+    input.onFrame.connect([ =, &id, &fullSystem, &orbSystem](std::shared_ptr<const IO::FramePack> frame)
     {
         if (fullSystem->initFailed || setting_fullResetRequested)
         {
@@ -386,10 +388,14 @@ int main( int argc, char** argv )
         {
             if (img1)
             {
+                orbSystem->TrackStereo(frame->frame, frame->frame_slave1, img->timestamp);
                 fullSystem->addActiveFrame(img, img1, frame->id);
             }
             else
             {
+                cv::Mat orbImg;
+                img->image.convertTo(orbImg, CV_8UC1, 0.8f);
+                orbSystem->TrackMonocular(orbImg, frame->timestamp);
                 fullSystem->addActiveFrame(img, frame->id);
             }
         }
@@ -404,8 +410,14 @@ int main( int argc, char** argv )
         viewer->run();
     }
 
+    orbSystem->Shutdown();
+
+    // Save camera trajectory
+    orbSystem->SaveTrajectoryTUM("CameraTrajectory.txt");
+    orbSystem->SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+
     fullSystem->blockUntilMappingIsFinished();
-    fullSystem->printResult("result.txt");
+    fullSystem->printResult("dsoResult.txt");
     fullSystem->printFrameLifetimes();
 
     for(auto ow : fullSystem->outputWrapper)

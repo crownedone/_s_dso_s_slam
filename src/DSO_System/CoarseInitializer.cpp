@@ -90,14 +90,14 @@ CoarseInitializer::~CoarseInitializer()
 
 bool CoarseInitializer::trackFrame(std::shared_ptr<FrameHessian> newFrameHessian,
                                    std::shared_ptr<FrameHessian> newFrameHessian_Right,
-                                   const std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps)
+                                   const std::vector<std::shared_ptr<Viewer::Output3D>>& wraps)
 {
     newFrame = newFrameHessian;
 
     for (auto& ow : wraps)
     {
         //ow->pushLiveFrame(newFrameHessian);
-        ow->pushStereoLiveFrame(newFrameHessian, newFrameHessian_Right);
+        ow->pushStereoLiveFrame(newFrameHessian->dI, newFrameHessian_Right->dI);
     }
 
     int maxIterations[] = {5, 5, 10, 30, 50};
@@ -338,7 +338,7 @@ bool CoarseInitializer::trackFrame(std::shared_ptr<FrameHessian> newFrameHessian
     return snapped && frameID > snappedAt + 1;
 }
 
-void CoarseInitializer::debugPlot(int lvl, const std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps)
+void CoarseInitializer::debugPlot(int lvl, const std::vector<std::shared_ptr<Viewer::Output3D>>& wraps)
 {
     bool needCall = false;
 

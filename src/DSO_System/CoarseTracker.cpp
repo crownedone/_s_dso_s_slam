@@ -1088,8 +1088,8 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
 
     if(debugPlot)
     {
-        IOWrap::displayImage("RES", resImage, false);
-        IOWrap::waitKey(1);
+        Viewer::displayImage("RES", resImage, false);
+        Viewer::waitKey(1);
     }
 
     Vec6 rs;
@@ -1150,7 +1150,7 @@ bool CoarseTracker::trackNewestCoarse(
     SE3& lastToNew_out, AffLight& aff_g2l_out,
     int coarsestLvl,
     Vec5 minResForAbort,
-    IOWrap::Output3DWrapper* wrap)
+    Viewer::Output3D* wrap)
 {
     debugPlot = setting_render_displayCoarseTrackingFull;
     debugPrint = false;
@@ -1383,7 +1383,7 @@ bool CoarseTracker::trackNewestCoarse(
 
 
 void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
-                                       std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps)
+                                       std::vector<std::shared_ptr<Viewer::Output3D>>& wraps)
 {
     if(w[1] == 0)
     {
@@ -1537,7 +1537,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
 
 
 
-void CoarseTracker::debugPlotIDepthMapFloat(std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps)
+void CoarseTracker::debugPlotIDepthMapFloat(std::vector<std::shared_ptr<Viewer::Output3D>>& wraps)
 {
     if(w[1] == 0)
     {
@@ -1549,7 +1549,7 @@ void CoarseTracker::debugPlotIDepthMapFloat(std::vector<std::shared_ptr<IOWrap::
 
     for(auto& ow : wraps)
     {
-        ow->pushDepthImageFloat(mim, lastRef);
+        ow->pushDepthImageFloat(mim);
     }
 }
 

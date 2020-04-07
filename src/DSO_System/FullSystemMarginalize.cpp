@@ -34,7 +34,6 @@
 #include "util/globalFuncs.hpp"
 #include <Eigen/LU>
 #include <algorithm>
-#include "IOWrapper/ImageDisplay.hpp"
 #include "util/globalCalib.hpp"
 
 #include <Eigen/SVD>
@@ -45,7 +44,7 @@
 #include "OptimizationBackend/EnergyFunctional.hpp"
 #include "OptimizationBackend/EnergyFunctionalStructs.hpp"
 
-#include "IOWrapper/Output3DWrapper.hpp"
+#include "IOWrapper/Output3D.hpp"
 
 #include "DSO_system/CoarseTracker.hpp"
 
@@ -224,10 +223,16 @@ void FullSystem::marginalizeFrame(std::shared_ptr<FrameHessian> frame)
     {
         std::vector<std::shared_ptr<FrameHessian>> v;
         v.push_back(frame);
+        std::map<int, ::Viewer::KeyFrameView> view;
+
+        if (!outputWrapper.empty())
+        {
+            updateFrameHessiansView(v, view, Hcalib);
+        }
 
         for(auto& ow : outputWrapper)
         {
-            ow->publishKeyframes(v, true, &Hcalib);
+            ow->publishKeyframes(view, true);
         }
     }
 

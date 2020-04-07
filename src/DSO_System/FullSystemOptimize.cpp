@@ -28,7 +28,7 @@
 #include "util/globalFuncs.hpp"
 #include <Eigen/LU>
 #include <algorithm>
-#include "IOWrapper/ImageDisplay.hpp"
+#include "IOWrapper/Output3D.hpp"
 #include "util/globalCalib.hpp"
 #include <Eigen/SVD>
 #include <Eigen/Eigenvalues>

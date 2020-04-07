@@ -24,26 +24,28 @@
 #include"Map.hpp"
 #include"MapPoint.hpp"
 #include"KeyFrame.hpp"
-#include<pangolin/pangolin.h>
 
 #include<mutex>
-
+namespace Viewer
+{
+class Output3D;
+}
 namespace ORB_SLAM2
 {
 
 class MapDrawer
 {
 public:
-    MapDrawer(Map* pMap, const string& strSettingPath);
+    MapDrawer(Map* pMap, const string& strSettingPath, std::shared_ptr<::Viewer::Output3D> viewer = nullptr);
 
     Map* mpMap;
 
     void DrawMapPoints();
     void DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph);
-    void DrawCurrentCamera(pangolin::OpenGlMatrix& Twc);
+    //void DrawCurrentCamera(pangolin::OpenGlMatrix& Twc);
     void SetCurrentCameraPose(const cv::Mat& Tcw);
     void SetReferenceKeyFrame(KeyFrame* pKF);
-    void GetCurrentOpenGLCameraMatrix(pangolin::OpenGlMatrix& M);
+    //void GetCurrentOpenGLCameraMatrix(pangolin::OpenGlMatrix& M);
 
 private:
 
@@ -57,6 +59,8 @@ private:
     cv::Mat mCameraPose;
 
     std::mutex mMutexCamera;
+
+    std::shared_ptr<::Viewer::Output3D> mpViewer;
 };
 
 } //namespace ORB_SLAM

@@ -38,6 +38,7 @@
 #include "util/FrameShell.hpp"
 #include "util/IndexThreadReduce.hpp"
 #include "OptimizationBackend/EnergyFunctional.hpp"
+#include "IOWrapper/Output3D.hpp"
 
 #include <Logging.hpp>
 
@@ -45,11 +46,6 @@
 
 namespace dso
 {
-namespace IOWrap
-{
-class Output3DWrapper;
-}
-
 class PixelSelector;
 class PCSyntheticPoint;
 class CoarseTracker;
@@ -139,9 +135,9 @@ inline bool eigenTestNan(const MatXX& m, std::string msg)
     return foundNan;
 }
 
-
-
-
+// Utility helper function
+void updateFrameHessiansView(const std::vector<std::shared_ptr<FrameHessian>>& fhss,
+                             std::map<int, ::Viewer::KeyFrameView>& view, CalibHessian& HC);
 
 class FullSystem
 {
@@ -174,7 +170,7 @@ public:
     void printFrameLifetimes();
     // contains pointers to active frames
 
-    std::vector<std::shared_ptr<IOWrap::Output3DWrapper>> outputWrapper;
+    std::vector<std::shared_ptr<::Viewer::Output3D>> outputWrapper;
 
     bool isLost;
     bool initFailed;
@@ -188,9 +184,6 @@ public:
 private:
 
     CalibHessian Hcalib;
-
-
-
 
     // opt single point
     int optimizePoint(PointHessian* point, int minObs, bool flagOOB);
@@ -298,6 +291,7 @@ private:
     CoarseDistanceMap* coarseDistanceMap;
 
     std::vector<std::shared_ptr<FrameHessian>> frameHessians;   // ONLY changed in marginalizeFrame and addFrame.
+    std::map<int, ::Viewer::KeyFrameView> frameHessiansView;   // ONLY changed in marginalizeFrame and addFrame.
     std::vector<PointFrameResidual*> activeResiduals;
     float currentMinActDist;
 

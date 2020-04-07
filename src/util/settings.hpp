@@ -123,7 +123,7 @@ extern int setting_gammaWeightsPixelSelect;
 
 extern bool setting_forceAceptStep;
 
-
+extern bool setting_showDepthMap;
 
 extern float setting_huberTH;
 

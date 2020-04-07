@@ -162,7 +162,9 @@ public:
                 const SparseMatrixBlock* a = it->block;
                 int srcOffset = rowBaseOfBlock(it->row);
                 // destVec += *a.transpose() * srcVec (according to the sub-vector parts)
-                internal::atxpy(*a, srcVec, srcOffset, destVec, destOffset);
+                //internal::atxpy(*a, srcVec, srcOffset, destVec, destOffset);
+                destVec.segment<MatrixType::ColsAtCompileTime>(srcOffset) += a->transpose() *
+                        srcVec.segment<MatrixType::RowsAtCompileTime>(destOffset);
             }
         }
     }

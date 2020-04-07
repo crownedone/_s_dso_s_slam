@@ -409,11 +409,15 @@ void SparseBlockMatrix<MatrixType>::multiplySymmetricUpperTriangle(double*& dest
             }
 
             // destVec += *a * srcVec (according to the sub-vector parts)
-            internal::axpy(*a, srcVec, srcOffset, destVec, destOffset);
+            //internal::axpy(*a, srcVec, srcOffset, destVec, destOffset);
+            destVec.segment<MatrixType::RowsAtCompileTime>(destOffset) += *a * srcVec.segment<MatrixType::ColsAtCompileTime>
+                    (srcOffset);
 
             if (destOffset < srcOffset)
             {
-                internal::atxpy(*a, srcVec, destOffset, destVec, srcOffset);
+                //internal::atxpy(*a, srcVec, destOffset, destVec, srcOffset);
+                destVec.segment<MatrixType::ColsAtCompileTime>(srcOffset) += a->transpose() *
+                        srcVec.segment<MatrixType::RowsAtCompileTime>(destOffset);
             }
         }
     }

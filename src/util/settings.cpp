@@ -134,7 +134,7 @@ int setting_gammaWeightsPixelSelect =
 float setting_huberTH = 9; // Huber Threshold
 
 
-
+bool setting_showDepthMap = false;
 
 
 // parameters controlling adaptive energy threshold computation.

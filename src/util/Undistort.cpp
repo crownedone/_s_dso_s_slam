@@ -32,7 +32,7 @@
 #include <iterator>
 #include "util/settings.hpp"
 #include "util/globalFuncs.hpp"
-#include "IOWrapper/ImageDisplay.hpp"
+#include "IOWrapper/Output3D.hpp"
 #include "util/Undistort.hpp"
 #include <opencv2/imgcodecs.hpp>
 
@@ -1438,19 +1438,19 @@ UndistortKB::~UndistortKB()
 void UndistortKB::distortCoordinates(float* in_x, float* in_y, float* out_x, float* out_y,
                                      int n) const
 {
-    const float fx = parsOrg[0];
-    const float fy = parsOrg[1];
-    const float cx = parsOrg[2];
-    const float cy = parsOrg[3];
-    const float k0 = parsOrg[4];
-    const float k1 = parsOrg[5];
-    const float k2 = parsOrg[6];
-    const float k3 = parsOrg[7];
+    const float fx = static_cast<float>(parsOrg[0]);
+    const float fy = static_cast<float>(parsOrg[1]);
+    const float cx = static_cast<float>(parsOrg[2]);
+    const float cy = static_cast<float>(parsOrg[3]);
+    const float k0 = static_cast<float>(parsOrg[4]);
+    const float k1 = static_cast<float>(parsOrg[5]);
+    const float k2 = static_cast<float>(parsOrg[6]);
+    const float k3 = static_cast<float>(parsOrg[7]);
 
-    const float ofx = K(0, 0);
-    const float ofy = K(1, 1);
-    const float ocx = K(0, 2);
-    const float ocy = K(1, 2);
+    const float ofx = static_cast<float>(K(0, 0));
+    const float ofy = static_cast<float>(K(1, 1));
+    const float ocx = static_cast<float>(K(0, 2));
+    const float ocy = static_cast<float>(K(1, 2));
 
 
     for(int i = 0; i < n; i++)

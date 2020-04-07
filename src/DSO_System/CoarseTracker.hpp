@@ -30,7 +30,7 @@
 #include <math.h>
 #include "util/settings.hpp"
 #include "OptimizationBackend/MatrixAccumulators.hpp"
-#include "IOWrapper/Output3DWrapper.hpp"
+#include "IOWrapper/Output3D.hpp"
 
 
 
@@ -53,7 +53,7 @@ public:
         std::shared_ptr<FrameHessian> newFrameHessian,
         SE3& lastToNew_out, AffLight& aff_g2l_out,
         int coarsestLvl, Vec5 minResForAbort,
-        IOWrap::Output3DWrapper* wrap = 0);
+        Viewer::Output3D* wrap = 0);
 
     void setCTRefForFirstFrame(
         std::vector<std::shared_ptr<FrameHessian>> frameHessians);
@@ -82,8 +82,8 @@ public:
     int w[PYR_LEVELS];
     int h[PYR_LEVELS];
 
-    void debugPlotIDepthMap(float* minID, float* maxID, std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps);
-    void debugPlotIDepthMapFloat(std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps);
+    void debugPlotIDepthMap(float* minID, float* maxID, std::vector<std::shared_ptr<Viewer::Output3D>>& wraps);
+    void debugPlotIDepthMapFloat(std::vector<std::shared_ptr<Viewer::Output3D>>& wraps);
 
     std::shared_ptr<FrameHessian> lastRef;
     AffLight lastRef_aff_g2l;

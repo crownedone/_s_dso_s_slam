@@ -1,46 +1,14 @@
-/**
-    This file is part of DSO.
-
-    Copyright 2016 Technical University of Munich and Intel.
-    Developed by Jakob Engel <engelj at in dot tum dot de>,
-    for more information see <http://vision.in.tum.de/dso>.
-    If you use this code, please cite the respective publications as
-    listed on the above website.
-
-    DSO is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    DSO is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with DSO. If not, see <http://www.gnu.org/licenses/>.
-*/
-
-
-
 #include <stdio.h>
 #include "util/settings.hpp"
-
-//#include <GL/glx.h>
-//#include <GL/gl.h>
-//#include <GL/glu.h>
+#include "util/NumType.hpp"
 
 #include <pangolin/pangolin.h>
 #include "KeyFrameDisplay.hpp"
-#include "DSO_system/HessianBlocks.hpp"
-#include "DSO_system/ImmaturePoint.hpp"
-#include "util/FrameShell.hpp"
 
+#include <sophus/se3.hpp>
+#include <opencv2/core.hpp>
 
-
-namespace dso
-{
-namespace IOWrap
+namespace Viewer
 {
 
 
@@ -52,7 +20,7 @@ KeyFrameDisplay::KeyFrameDisplay()
 
     id = 0;
     active = true;
-    camToWorld = SE3();
+    camToWorld = Sophus::SE3d();
 
     needRefresh = true;
 
@@ -65,36 +33,32 @@ KeyFrameDisplay::KeyFrameDisplay()
     numGLBufferPoints = 0;
     bufferValid = false;
 }
-void KeyFrameDisplay::setFromF(std::shared_ptr<FrameShell> frame, CalibHessian* HCalib)
+void KeyFrameDisplay::setFromF(const KeyFrameView& kf)
 {
-    id = frame->id;
-    fx = HCalib->fxl();
-    fy = HCalib->fyl();
-    cx = HCalib->cxl();
-    cy = HCalib->cyl();
-    width = wG[0];
-    height = hG[0];
+    id = kf.id;
+    fx = kf.fx;
+    fy = kf.fy;
+    cx = kf.cx;
+    cy = kf.cy;
+    width = kf.w;
+    height = kf.h;
     fxi = 1 / fx;
     fyi = 1 / fy;
     cxi = -cx / fx;
     cyi = -cy / fy;
-    camToWorld = frame->camToWorld;
+    camToWorld = kf.camToWorld;
     needRefresh = true;
 }
 
-void KeyFrameDisplay::setFromKF(std::shared_ptr<FrameHessian> fh, CalibHessian* HCalib)
+void KeyFrameDisplay::setFromKF(const KeyFrameView& kf)
 {
-    setFromF(fh->shell, HCalib);
+    setFromF(kf);
 
-    // add all traces, inlier and outlier points.
-    int npoints =   fh->immaturePoints.size() +
-                    fh->pointHessians.size() +
-                    fh->pointHessiansMarginalized.size() +
-                    fh->pointHessiansOut.size();
+    size_t npoints = kf.pts.size();
 
-    if(numSparseBufferSize < npoints)
+    if (numSparseBufferSize < npoints)
     {
-        if(originalInputSparse != 0)
+        if (originalInputSparse != 0)
         {
             delete originalInputSparse;
         }
@@ -104,80 +68,11 @@ void KeyFrameDisplay::setFromKF(std::shared_ptr<FrameHessian> fh, CalibHessian* 
     }
 
     InputPointSparse<MAX_RES_PER_POINT>* pc = originalInputSparse;
-    numSparsePoints = 0;
+    numSparsePoints = npoints;
+    // Quick copy all
+    memcpy(pc, kf.pts.data(), npoints * sizeof(InputPointSparse<MAX_RES_PER_POINT>));
 
-    for(ImmaturePoint* p : fh->immaturePoints)
-    {
-        for(int i = 0; i < patternNum; i++)
-        {
-            pc[numSparsePoints].color[i] = p->color[i];
-        }
-
-        pc[numSparsePoints].u = p->u;
-        pc[numSparsePoints].v = p->v;
-        pc[numSparsePoints].idpeth = (p->idepth_max + p->idepth_min) * 0.5f;
-        pc[numSparsePoints].idepth_hessian = 1000;
-        pc[numSparsePoints].relObsBaseline = 0;
-        pc[numSparsePoints].numGoodRes = 1;
-        pc[numSparsePoints].status = 0;
-        numSparsePoints++;
-    }
-
-    for(PointHessian* p : fh->pointHessians)
-    {
-        for(int i = 0; i < patternNum; i++)
-        {
-            pc[numSparsePoints].color[i] = p->color[i];
-        }
-
-        pc[numSparsePoints].u = p->u;
-        pc[numSparsePoints].v = p->v;
-        pc[numSparsePoints].idpeth = p->idepth_scaled;
-        pc[numSparsePoints].relObsBaseline = p->maxRelBaseline;
-        pc[numSparsePoints].idepth_hessian = p->idepth_hessian;
-        pc[numSparsePoints].numGoodRes =  0;
-        pc[numSparsePoints].status = 1;
-
-        numSparsePoints++;
-    }
-
-    for(PointHessian* p : fh->pointHessiansMarginalized)
-    {
-        for(int i = 0; i < patternNum; i++)
-        {
-            pc[numSparsePoints].color[i] = p->color[i];
-        }
-
-        pc[numSparsePoints].u = p->u;
-        pc[numSparsePoints].v = p->v;
-        pc[numSparsePoints].idpeth = p->idepth_scaled;
-        pc[numSparsePoints].relObsBaseline = p->maxRelBaseline;
-        pc[numSparsePoints].idepth_hessian = p->idepth_hessian;
-        pc[numSparsePoints].numGoodRes =  0;
-        pc[numSparsePoints].status = 2;
-        numSparsePoints++;
-    }
-
-    for(PointHessian* p : fh->pointHessiansOut)
-    {
-        for(int i = 0; i < patternNum; i++)
-        {
-            pc[numSparsePoints].color[i] = p->color[i];
-        }
-
-        pc[numSparsePoints].u = p->u;
-        pc[numSparsePoints].v = p->v;
-        pc[numSparsePoints].idpeth = p->idepth_scaled;
-        pc[numSparsePoints].relObsBaseline = p->maxRelBaseline;
-        pc[numSparsePoints].idepth_hessian = p->idepth_hessian;
-        pc[numSparsePoints].numGoodRes =  0;
-        pc[numSparsePoints].status = 3;
-        numSparsePoints++;
-    }
-
-    assert(numSparsePoints <= npoints);
-
-    camToWorld = fh->PRE_camToWorld;
+    camToWorld = kf.PRE_camToWorld;
     needRefresh = true;
 }
 
@@ -287,8 +182,8 @@ bool KeyFrameDisplay::refreshPC(bool canRefresh, float scaledTH, float absTH, in
                 continue;
             }
 
-            int dx = patternP[pnt][0];
-            int dy = patternP[pnt][1];
+            int dx = dso::patternP[pnt][0];
+            int dy = dso::patternP[pnt][1];
 
             tmpVertexBuffer[vertexBufferNumPoints][0] = ((originalInputSparse[i].u + dx) * fxi + cxi) * depth;
             tmpVertexBuffer[vertexBufferNumPoints][1] = ((originalInputSparse[i].v + dy) * fyi + cyi) * depth;
@@ -462,5 +357,4 @@ void KeyFrameDisplay::drawPC(float pointSize)
     glPopMatrix();
 }
 
-}
 }

@@ -34,7 +34,6 @@
 #include "util/globalFuncs.hpp"
 #include <Eigen/LU>
 #include <algorithm>
-#include "IOWrapper/ImageDisplay.hpp"
 #include "util/globalCalib.hpp"
 #include <Eigen/SVD>
 #include <Eigen/Eigenvalues>
@@ -49,7 +48,7 @@
 #include "OptimizationBackend/EnergyFunctional.hpp"
 #include "OptimizationBackend/EnergyFunctionalStructs.hpp"
 
-#include "IOWrapper/Output3DWrapper.hpp"
+#include "IOWrapper/Output3D.hpp"
 
 #include "util/ImageAndExposure.hpp"
 #include "StopWatch.hpp"
@@ -92,6 +91,22 @@ int FrameHessian::instanceCounter = 0;
 int PointHessian::instanceCounter = 0;
 int CalibHessian::instanceCounter = 0;
 
+//::Viewer::KeyFrameView prepareKeyFrameView(std::shared_ptr<FrameHessian> l)
+//{
+//
+//}
+//
+//std::pair<::Viewer::KeyFrameView, ::Viewer::KeyFrameView> prepareKeyFrameView(std::shared_ptr<FrameHessian> l,
+//        std::shared_ptr<FrameHessian> r)
+//{
+//    auto ret = std::make_pair(::Viewer::KeyFrameView(), ::Viewer::KeyFrameView());
+//    ret.first.id = l->shell->id;
+//    ret.first.camToWorld = l->shell->camToWorld;
+//    ret.first.PRE_camToWorld = l->PRE_camToWorld;
+//    ret.first.cx = ret.second.cx = Hcalib
+//
+//
+//}
 
 
 FullSystem::FullSystem()
@@ -344,7 +359,7 @@ Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh, std::shared_pt
     // show original images
     for (auto& ow : outputWrapper)
     {
-        ow->pushStereoLiveFrame(fh, fh_right);
+        ow->pushStereoLiveFrame(fh->dI, fh_right->dI);
     }
 
     std::shared_ptr<FrameHessian> lastF = coarseTracker->lastRef;
@@ -633,7 +648,7 @@ Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh)
 
     for (auto& ow : outputWrapper)
     {
-        ow->pushLiveFrame(fh);
+        ow->pushLiveFrame(fh->dI);
     }
 
     std::shared_ptr<FrameHessian> lastF = coarseTracker->lastRef;
@@ -1666,7 +1681,17 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, std::sh
 
         for (auto& ow : outputWrapper)
         {
-            ow->publishCamPose(fh->shell, &Hcalib);
+            ::Viewer::KeyFrameView kfv;
+            kfv.id = fh->shell->id;
+            kfv.camToWorld = fh->shell->camToWorld;
+            kfv.w = wG[0];
+            kfv.h = hG[0];
+            kfv.cx = Hcalib.cxl();
+            kfv.cy = Hcalib.cyl();
+            kfv.fx = Hcalib.fxl();
+            kfv.fy = Hcalib.fyl();
+
+            ow->publishCamPose(kfv);
         }
 
         lock.unlock();
@@ -1683,11 +1708,11 @@ void FullSystem::deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, std::shar
     {
         if (goStepByStep && lastRefStopID != coarseTracker->refFrameID)
         {
-            IOWrap::displayImage("frameToTrack", fh->dI);
+            Viewer::displayImage("frameToTrack", fh->dI);
 
             while (true)
             {
-                char k = IOWrap::waitKey(0);
+                char k = Viewer::waitKey(0);
 
                 if (k == ' ')
                 {
@@ -1701,7 +1726,7 @@ void FullSystem::deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, std::shar
         }
         else
         {
-            handleKey(IOWrap::waitKey(1));
+            handleKey(Viewer::waitKey(1));
         }
 
 
@@ -1838,7 +1863,16 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
 
         for (auto& ow : outputWrapper)
         {
-            ow->publishCamPose(fh->shell, &Hcalib);
+            ::Viewer::KeyFrameView kfv;
+            kfv.id = fh->shell->id;
+            kfv.camToWorld = fh->shell->camToWorld;
+            kfv.w = wG[0];
+            kfv.h = hG[0];
+            kfv.cx = Hcalib.cxl();
+            kfv.cy = Hcalib.cyl();
+            kfv.fx = Hcalib.fxl();
+            kfv.fy = Hcalib.fyl();
+            ow->publishCamPose(kfv);
         }
 
 
@@ -1860,11 +1894,11 @@ void FullSystem::deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, bool need
     {
         if (goStepByStep && lastRefStopID != coarseTracker->refFrameID)
         {
-            IOWrap::displayImage("frameToTrack", fh->dI);
+            Viewer::displayImage("frameToTrack", fh->dI);
 
             while (true)
             {
-                char k = IOWrap::waitKey(0);
+                char k = Viewer::waitKey(0);
 
                 if (k == ' ')
                 {
@@ -1878,7 +1912,7 @@ void FullSystem::deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, bool need
         }
         else
         {
-            handleKey(IOWrap::waitKey(1));
+            handleKey(Viewer::waitKey(1));
         }
 
 
@@ -2124,7 +2158,11 @@ void FullSystem::makeKeyFrame(std::shared_ptr<FrameHessian> fh, std::shared_ptr<
         coarseTracker_forNewKF->setCoarseTrackingRef(frameHessians, fh_right, Hcalib);
 
         coarseTracker_forNewKF->debugPlotIDepthMap(&minIdJetVisTracker, &maxIdJetVisTracker, outputWrapper);
-        coarseTracker_forNewKF->debugPlotIDepthMapFloat(outputWrapper);
+
+        if(setting_showDepthMap)
+        {
+            coarseTracker_forNewKF->debugPlotIDepthMapFloat(outputWrapper);
+        }
     }
 
 
@@ -2146,11 +2184,16 @@ void FullSystem::makeKeyFrame(std::shared_ptr<FrameHessian> fh, std::shared_ptr<
     makeNewTraces(fh, fh_right, 0);
 
 
+    // Update frameHessiansView:
+    if (!outputWrapper.empty())
+    {
+        updateFrameHessiansView(frameHessians, frameHessiansView, Hcalib);
+    }
 
     for (auto& ow : outputWrapper)
     {
         ow->publishGraph(ef->connectivityMap);
-        ow->publishKeyframes(frameHessians, false, &Hcalib);
+        ow->publishKeyframes(frameHessiansView, false);
     }
 
 
@@ -2299,7 +2342,11 @@ void FullSystem::makeKeyFrame(std::shared_ptr<FrameHessian> fh)
 
 
         coarseTracker_forNewKF->debugPlotIDepthMap(&minIdJetVisTracker, &maxIdJetVisTracker, outputWrapper);
-        coarseTracker_forNewKF->debugPlotIDepthMapFloat(outputWrapper);
+
+        if (setting_showDepthMap)
+        {
+            coarseTracker_forNewKF->debugPlotIDepthMapFloat(outputWrapper);
+        }
     }
 
 
@@ -2321,20 +2368,21 @@ void FullSystem::makeKeyFrame(std::shared_ptr<FrameHessian> fh)
     ef->marginalizePointsF();
 
 
-
     // =========================== add new Immature points & new residuals =========================
     makeNewTraces(fh, fh, 0);
 
 
-
-
+    // Update frameHessiansView:
+    if (!outputWrapper.empty())
+    {
+        updateFrameHessiansView(frameHessians, frameHessiansView, Hcalib);
+    }
 
     for (auto& ow : outputWrapper)
     {
         ow->publishGraph(ef->connectivityMap);
-        ow->publishKeyframes(frameHessians, false, &Hcalib);
+        ow->publishKeyframes(frameHessiansView, false);
     }
-
 
 
     // =========================== Marginalize Frames =========================
@@ -2829,5 +2877,101 @@ void FullSystem::printEvalLine()
 
 
 
+
+void updateFrameHessiansView(const std::vector<std::shared_ptr<FrameHessian>>& fhss, std::map<int, ::Viewer::KeyFrameView>& view,
+                             CalibHessian& HC)
+{
+    for (auto& el : fhss)
+    {
+        if (view.find(el->shell->id) == view.end())
+        {
+            ::Viewer::KeyFrameView kfd;
+            kfd.id = el->shell->id;
+            kfd.camToWorld = el->shell->camToWorld;
+            kfd.PRE_camToWorld = el->PRE_camToWorld;
+            kfd.cx = HC.cxl();
+            kfd.cy = HC.cyl();
+            kfd.fx = HC.fxl();
+            kfd.fy = HC.fyl();
+            size_t npoints = el->immaturePoints.size() +
+                             el->pointHessians.size() +
+                             el->pointHessiansMarginalized.size() +
+                             el->pointHessiansOut.size();
+            kfd.pts.resize(npoints);
+            size_t numSparsePoints = 0;
+
+            for (ImmaturePoint* p : el->immaturePoints)
+            {
+                for (int i = 0; i < patternNum; i++)
+                {
+                    kfd.pts[numSparsePoints].color[i] = p->color[i];
+                }
+
+                kfd.pts[numSparsePoints].u = p->u;
+                kfd.pts[numSparsePoints].v = p->v;
+                kfd.pts[numSparsePoints].idpeth = (p->idepth_max + p->idepth_min) * 0.5f;
+                kfd.pts[numSparsePoints].idepth_hessian = 1000;
+                kfd.pts[numSparsePoints].relObsBaseline = 0;
+                kfd.pts[numSparsePoints].numGoodRes = 1;
+                kfd.pts[numSparsePoints].status = 0;
+                numSparsePoints++;
+            }
+
+            for (PointHessian* p : el->pointHessians)
+            {
+                for (int i = 0; i < patternNum; i++)
+                {
+                    kfd.pts[numSparsePoints].color[i] = p->color[i];
+                }
+
+                kfd.pts[numSparsePoints].u = p->u;
+                kfd.pts[numSparsePoints].v = p->v;
+                kfd.pts[numSparsePoints].idpeth = p->idepth_scaled;
+                kfd.pts[numSparsePoints].relObsBaseline = p->maxRelBaseline;
+                kfd.pts[numSparsePoints].idepth_hessian = p->idepth_hessian;
+                kfd.pts[numSparsePoints].numGoodRes = 0;
+                kfd.pts[numSparsePoints].status = 1;
+
+                numSparsePoints++;
+            }
+
+            for (PointHessian* p : el->pointHessiansMarginalized)
+            {
+                for (int i = 0; i < patternNum; i++)
+                {
+                    kfd.pts[numSparsePoints].color[i] = p->color[i];
+                }
+
+                kfd.pts[numSparsePoints].u = p->u;
+                kfd.pts[numSparsePoints].v = p->v;
+                kfd.pts[numSparsePoints].idpeth = p->idepth_scaled;
+                kfd.pts[numSparsePoints].relObsBaseline = p->maxRelBaseline;
+                kfd.pts[numSparsePoints].idepth_hessian = p->idepth_hessian;
+                kfd.pts[numSparsePoints].numGoodRes = 0;
+                kfd.pts[numSparsePoints].status = 2;
+                numSparsePoints++;
+            }
+
+            for (PointHessian* p : el->pointHessiansOut)
+            {
+                for (int i = 0; i < patternNum; i++)
+                {
+                    kfd.pts[numSparsePoints].color[i] = p->color[i];
+                }
+
+                kfd.pts[numSparsePoints].u = p->u;
+                kfd.pts[numSparsePoints].v = p->v;
+                kfd.pts[numSparsePoints].idpeth = p->idepth_scaled;
+                kfd.pts[numSparsePoints].relObsBaseline = p->maxRelBaseline;
+                kfd.pts[numSparsePoints].idepth_hessian = p->idepth_hessian;
+                kfd.pts[numSparsePoints].numGoodRes = 0;
+                kfd.pts[numSparsePoints].status = 3;
+                numSparsePoints++;
+            }
+
+            view[kfd.id] = std::move(kfd);
+        }
+    }
+}
 
 }

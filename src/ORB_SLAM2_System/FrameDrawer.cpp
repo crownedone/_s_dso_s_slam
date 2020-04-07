@@ -25,11 +25,12 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include<mutex>
+#include "IOWrapper/Output3D.hpp"
 
 namespace ORB_SLAM2
 {
 
-FrameDrawer::FrameDrawer(Map* pMap): mpMap(pMap)
+FrameDrawer::FrameDrawer(Map* pMap, std::shared_ptr<::Viewer::Output3D> viewer): mpMap(pMap), mpViewer(viewer)
 {
     mState = Tracking::SYSTEM_NOT_READY;
     mIm = cv::Mat(480, 640, CV_8UC3, cv::Scalar(0, 0, 0));
@@ -186,44 +187,49 @@ void FrameDrawer::DrawTextInfo(cv::Mat& im, int nState, cv::Mat& imText)
 
 void FrameDrawer::Update(Tracking* pTracker)
 {
-    unique_lock<mutex> lock(mMutex);
-    pTracker->mImGray.copyTo(mIm);
-    mvCurrentKeys = pTracker->mCurrentFrame.mvKeys;
-    N = mvCurrentKeys.size();
-    mvbVO = vector<bool>(N, false);
-    mvbMap = vector<bool>(N, false);
-    mbOnlyTracking = pTracker->mbOnlyTracking;
+    {
+        unique_lock<mutex> lock(mMutex);
+        pTracker->mImGray.copyTo(mIm);
+        mvCurrentKeys = pTracker->mCurrentFrame.mvKeys;
+        N = mvCurrentKeys.size();
+        mvbVO = vector<bool>(N, false);
+        mvbMap = vector<bool>(N, false);
+        mbOnlyTracking = pTracker->mbOnlyTracking;
 
 
-    if(pTracker->mLastProcessedState == Tracking::NOT_INITIALIZED)
-    {
-        mvIniKeys = pTracker->mInitialFrame.mvKeys;
-        mvIniMatches = pTracker->mvIniMatches;
-    }
-    else if(pTracker->mLastProcessedState == Tracking::OK)
-    {
-        for(int i = 0; i < N; i++)
+        if(pTracker->mLastProcessedState == Tracking::NOT_INITIALIZED)
         {
-            MapPoint* pMP = pTracker->mCurrentFrame.mvpMapPoints[i];
-
-            if(pMP)
+            mvIniKeys = pTracker->mInitialFrame.mvKeys;
+            mvIniMatches = pTracker->mvIniMatches;
+        }
+        else if(pTracker->mLastProcessedState == Tracking::OK)
+        {
+            for(int i = 0; i < N; i++)
             {
-                if(!pTracker->mCurrentFrame.mvbOutlier[i])
+                MapPoint* pMP = pTracker->mCurrentFrame.mvpMapPoints[i];
+
+                if(pMP)
                 {
-                    if(pMP->Observations() > 0)
+                    if(!pTracker->mCurrentFrame.mvbOutlier[i])
                     {
-                        mvbMap[i] = true;
-                    }
-                    else
-                    {
-                        mvbVO[i] = true;
+                        if(pMP->Observations() > 0)
+                        {
+                            mvbMap[i] = true;
+                        }
+                        else
+                        {
+                            mvbVO[i] = true;
+                        }
                     }
                 }
             }
         }
+
+        mState = static_cast<int>(pTracker->mLastProcessedState);
     }
 
-    mState = static_cast<int>(pTracker->mLastProcessedState);
+    // Draw orb frame after each update (maybe do it async)
+    mpViewer->pushORBFrame(DrawFrame());
 }
 
 } //namespace ORB_SLAM

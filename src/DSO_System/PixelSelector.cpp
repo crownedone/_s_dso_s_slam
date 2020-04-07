@@ -29,7 +29,7 @@
 
 
 #include "util/NumType.hpp"
-#include "IOWrapper/ImageDisplay.hpp"
+#include "IOWrapper/Output3D.hpp"
 #include "util/globalCalib.hpp"
 #include "DSO_system/HessianBlocks.hpp"
 #include "util/globalFuncs.hpp"
@@ -346,7 +346,7 @@ int PixelSelector::makeMaps(
             img.at<cv::Vec3b>(i) = cv::Vec3b(c, c, c);
         }
 
-        IOWrap::displayImage("Selector Image", img);
+        Viewer::displayImage("Selector Image", img);
 
         for(int y = 0; y < h; y++)
             for(int x = 0; x < w; x++)
@@ -367,9 +367,9 @@ int PixelSelector::makeMaps(
                 }
             }
 
-        IOWrap::displayImage("Selector Pixels", img);
+        Viewer::displayImage("Selector Pixels", img);
 
-        IOWrap::waitKey(1);
+        Viewer::waitKey(1);
     }
 
     return numHaveSub;

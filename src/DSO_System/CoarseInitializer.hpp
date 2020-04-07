@@ -26,7 +26,7 @@
 
 #include "util/NumType.hpp"
 #include "OptimizationBackend/MatrixAccumulators.hpp"
-#include "IOWrapper/Output3DWrapper.hpp"
+#include "IOWrapper/Output3D.hpp"
 #include "util/settings.hpp"
 #include <vector>
 #include <math.h>
@@ -87,7 +87,7 @@ public:
     void setFirstStereo(CalibHessian* HCalib, std::shared_ptr<FrameHessian> newFrameHessian,
                         std::shared_ptr<FrameHessian> newFrameHessian_Right);
     bool trackFrame(std::shared_ptr<FrameHessian> newFrameHessian, std::shared_ptr<FrameHessian> newFrameHessian_Right,
-                    const std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps);
+                    const std::vector<std::shared_ptr<Viewer::Output3D>>& wraps);
     void calcTGrads(std::shared_ptr<FrameHessian> newFrameHessian);
 
     int frameID;
@@ -164,7 +164,7 @@ private:
 
     void makeGradients(Eigen::Vector3f** data);
 
-    void debugPlot(int lvl, const std::vector<std::shared_ptr<IOWrap::Output3DWrapper>>& wraps);
+    void debugPlot(int lvl, const std::vector<std::shared_ptr<Viewer::Output3D>>& wraps);
     void makeNN();
 };
 
