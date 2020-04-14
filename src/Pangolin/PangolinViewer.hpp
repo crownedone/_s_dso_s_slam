@@ -40,7 +40,7 @@ public:
     void run();
     void close();
 
-    void addImageToDisplay(std::string name, const cv::Mat& image);
+    void addImageToDisplay(std::string name, cv::Mat image);
     void clearAllImagesToDisplay();
 
 
@@ -50,10 +50,10 @@ public:
     virtual void publishCamPose(const KeyFrameView& kf) override;
 
 
-    virtual void pushLiveFrame(const cv::Mat& left) override;
+    virtual void pushLiveFrame(cv::Mat left) override;
     virtual void pushORBFrame(cv::Mat left) override;
-    virtual void pushStereoLiveFrame(const cv::Mat& left, const cv::Mat& right) override;
-    virtual void pushDepthImage(const cv::Mat& image) override;
+    virtual void pushStereoLiveFrame(cv::Mat left, cv::Mat right) override;
+    virtual void pushDepthImage(cv::Mat image) override;
     virtual bool needPushDepthImage() override;
 
     virtual void join() override;

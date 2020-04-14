@@ -119,12 +119,18 @@ struct FrameHessian
     std::shared_ptr<FrameShell> shell;
 
     const Eigen::Vector3f* dI_ptr; // Pointer access to dI.
-    cv::Mat dI;                                     // trace, fine tracking. Used for direction select (not for gradient histograms etc.)
-    std::array<cv::Mat, PYR_LEVELS>
-    dIp;            // coarse tracking / coarse initializer. NAN in [0] only.
-    std::array<cv::Mat, PYR_LEVELS>
-    absSquaredGrad; // only used for pixel select (histograms etc.). no NAN.
 
+    // coarse tracking / coarse initializer. NAN in [0] only.
+    std::array<cv::Mat, PYR_LEVELS> dIp;
+    std::array<cv::UMat, PYR_LEVELS> dIpUMat;
+
+    // only used for pixel select (histograms etc.). no NAN.
+    std::array<cv::Mat, PYR_LEVELS> absSquaredGrad;
+    std::array<cv::UMat, PYR_LEVELS> absSquaredGradUMat;
+
+    // just the float color image (faster show)
+    std::array<cv::Mat, PYR_LEVELS> colorMat;
+    std::array<cv::UMat, PYR_LEVELS> colorUMat;
 
     int frameID;                        // incremental ID for keyframes only!
     static int instanceCounter;

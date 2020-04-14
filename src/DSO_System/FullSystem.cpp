@@ -359,7 +359,7 @@ Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh, std::shared_pt
     // show original images
     for (auto& ow : outputWrapper)
     {
-        ow->pushStereoLiveFrame(fh->dI, fh_right->dI);
+        ow->pushStereoLiveFrame(fh->colorMat[0], fh_right->colorMat[0]);
     }
 
     std::shared_ptr<FrameHessian> lastF = coarseTracker->lastRef;
@@ -648,7 +648,7 @@ Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh)
 
     for (auto& ow : outputWrapper)
     {
-        ow->pushLiveFrame(fh->dI);
+        ow->pushLiveFrame(fh->colorMat[0]);
     }
 
     std::shared_ptr<FrameHessian> lastF = coarseTracker->lastRef;
@@ -1704,7 +1704,7 @@ void FullSystem::deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, std::shar
     {
         if (goStepByStep && lastRefStopID != coarseTracker->refFrameID)
         {
-            Viewer::displayImage("frameToTrack", fh->dI);
+            Viewer::displayImage("frameToTrack", fh->colorMat[0]);
 
             while (true)
             {
@@ -1885,7 +1885,7 @@ void FullSystem::deliverTrackedFrame(std::shared_ptr<FrameHessian> fh, bool need
     {
         if (goStepByStep && lastRefStopID != coarseTracker->refFrameID)
         {
-            Viewer::displayImage("frameToTrack", fh->dI);
+            Viewer::displayImage("frameToTrack", fh->colorMat[0]);
 
             while (true)
             {

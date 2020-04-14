@@ -36,8 +36,8 @@ struct KeyFrameView
 
 
 // 2D windows (opencv)
-void displayImage(const char* windowName, const cv::Mat& img, bool autoSize = false);
-void displayImageStitch(const char* windowName, const std::vector<cv::Mat> images,
+void displayImage(const char* windowName, cv::Mat img, bool autoSize = false);
+void displayImageStitch(const char* windowName, const std::vector<cv::Mat>& images,
                         int cc = 0, int rc = 0);
 
 int waitKey(int milliseconds);
@@ -51,14 +51,14 @@ public:
     virtual void publishKeyframes(const std::map<int, KeyFrameView>& frames, bool final) {};
     virtual void publishCamPose(const KeyFrameView& kf) {};
 
-    virtual void pushLiveFrame(const cv::Mat& left) {};
-    virtual void pushStereoLiveFrame(const cv::Mat& left, const cv::Mat& right) {};
+    virtual void pushLiveFrame(cv::Mat left) {};
+    virtual void pushStereoLiveFrame(cv::Mat left, cv::Mat right) {};
     virtual void pushORBFrame(cv::Mat left) {};
-    virtual void pushDepthImage(const cv::Mat& image) {};
+    virtual void pushDepthImage(cv::Mat image) {};
     virtual bool needPushDepthImage();
 
     // For view of idepth.
-    virtual void pushDepthImageFloat(const cv::Mat& image)
+    virtual void pushDepthImageFloat(cv::Mat image)
     {
         displayImage("depth image", image);
         waitKey(1);

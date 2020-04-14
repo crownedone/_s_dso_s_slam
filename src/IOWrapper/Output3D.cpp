@@ -8,7 +8,7 @@ std::unordered_set<std::string> openWindows;
 std::mutex openCVdisplayMutex;
 
 
-void displayImage(const char* windowName, const cv::Mat& img, bool autoSize)
+void displayImage(const char* windowName, cv::Mat img, bool autoSize)
 {
     cv::Mat image = img;
 
@@ -33,7 +33,7 @@ void displayImage(const char* windowName, const cv::Mat& img, bool autoSize)
 }
 
 
-void displayImageStitch(const char* windowName, const std::vector<cv::Mat> images, int cc, int rc)
+void displayImageStitch(const char* windowName, const std::vector<cv::Mat>& images, int cc, int rc)
 {
     if (images.size() == 0)
     {

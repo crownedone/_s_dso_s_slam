@@ -1172,6 +1172,7 @@ void CoarseTracker::setCoarseTrackingRef(
     firstCoarseRMSE = -1;
 
 }
+
 void CoarseTracker::setCoarseTrackingRef(std::vector<std::shared_ptr<FrameHessian>> frameHessians,
                                          std::shared_ptr<FrameHessian> fh_right, CalibHessian Hcalib)
 {
@@ -1186,6 +1187,7 @@ void CoarseTracker::setCoarseTrackingRef(std::vector<std::shared_ptr<FrameHessia
     firstCoarseRMSE = -1;
 
 }
+
 bool CoarseTracker::trackNewestCoarse(
     std::shared_ptr<FrameHessian> newFrameHessian,
     SE3& lastToNew_out, AffLight& aff_g2l_out,

@@ -591,7 +591,7 @@ void PangolinViewer::pushORBFrame(cv::Mat left)
     orbImgChanged = true;
 }
 
-void PangolinViewer::pushLiveFrame(const cv::Mat& left)
+void PangolinViewer::pushLiveFrame(cv::Mat left)
 {
     if (!dso::setting_render_displayVideo)
     {
@@ -605,25 +605,33 @@ void PangolinViewer::pushLiveFrame(const cv::Mat& left)
 
     std::unique_lock<std::mutex> lk(openImagesMutex);
 
-    auto ptr = left.ptr<Eigen::Vector3f>();
-
-    for (int i = 0; i < w * h; i++)
+    if (left.type() == CV_32FC3)
     {
-        reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
-            reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
-                reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
-                    ptr[i][0] * 0.8 > 255.0f ? 255.f :
-                    ptr[i][0] * 0.8f;
+        auto ptr = left.ptr<Eigen::Vector3f>();
 
-        reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][0] =
-            reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][1] =
-                reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][2] = 255.0f;
+        for (int i = 0; i < w * h; i++)
+        {
+            reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
+                reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
+                    reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
+                        ptr[i][0] * 0.8 > 255.0f ? 255.f :
+                        ptr[i][0] * 0.8f;
+
+            //internalVideoImg_Right.setTo(cv::Scalar::all(255));
+        }
+    }
+    else
+    {
+        cv::Mat ll;
+        left.convertTo(ll, CV_8U, 0.8);
+        cv::cvtColor(ll, internalVideoImg, cv::ColorConversionCodes::COLOR_GRAY2BGR);
+        //internalVideoImg_Right.setTo(cv::Scalar::all(255));
     }
 
     videoImgChanged = true;
 }
 
-void PangolinViewer::pushStereoLiveFrame(const cv::Mat& left, const cv::Mat& right)
+void PangolinViewer::pushStereoLiveFrame(cv::Mat left, cv::Mat right)
 {
     if (!dso::setting_render_displayVideo)
     {
@@ -637,22 +645,33 @@ void PangolinViewer::pushStereoLiveFrame(const cv::Mat& left, const cv::Mat& rig
 
     std::unique_lock<std::mutex> lk(openImagesMutex);
 
-    auto ptrL = left.ptr<Eigen::Vector3f>();
-    auto ptrR = right.ptr<Eigen::Vector3f>();
-
-    for (int i = 0; i < w * h; i++)
+    if (left.type() == CV_32FC3)
     {
-        reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
-            reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
-                reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
-                    ptrL[i][0] * 0.8 > 255.0f ? 255.f :
-                    ptrL[i][0] * 0.8f;
+        auto ptrL = left.ptr<Eigen::Vector3f>();
+        auto ptrR = right.ptr<Eigen::Vector3f>();
 
-        reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][0] =
-            reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][1] =
-                reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][2] =
-                    ptrR[i][0] * 0.8 > 255.0f ? 255.f :
-                    ptrR[i][0] * 0.8f;
+        for (int i = 0; i < w * h; i++)
+        {
+            reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][0] =
+                reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][1] =
+                    reinterpret_cast<cv::Vec3b*>(internalVideoImg.data)[i][2] =
+                        ptrL[i][0] * 0.8 > 255.0f ? 255.f :
+                        ptrL[i][0] * 0.8f;
+
+            reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][0] =
+                reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][1] =
+                    reinterpret_cast<cv::Vec3b*>(internalVideoImg_Right.data)[i][2] =
+                        ptrR[i][0] * 0.8 > 255.0f ? 255.f :
+                        ptrR[i][0] * 0.8f;
+        }
+    }
+    else
+    {
+        cv::Mat ll, rr;
+        left.convertTo(ll, CV_8U, 0.8);
+        right.convertTo(rr, CV_8U, 0.8);
+        cv::cvtColor(ll, internalVideoImg, cv::ColorConversionCodes::COLOR_GRAY2BGR);
+        cv::cvtColor(rr, internalVideoImg_Right, cv::ColorConversionCodes::COLOR_GRAY2BGR);
     }
 
     videoImgChanged = true;
@@ -662,7 +681,7 @@ bool PangolinViewer::needPushDepthImage()
 {
     return dso::setting_render_displayDepth;
 }
-void PangolinViewer::pushDepthImage(const cv::Mat& image)
+void PangolinViewer::pushDepthImage(cv::Mat image)
 {
 
     if(!dso::setting_render_displayDepth)

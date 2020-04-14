@@ -97,7 +97,7 @@ bool CoarseInitializer::trackFrame(std::shared_ptr<FrameHessian> newFrameHessian
     for (auto& ow : wraps)
     {
         //ow->pushLiveFrame(newFrameHessian);
-        ow->pushStereoLiveFrame(newFrameHessian->dI, newFrameHessian_Right->dI);
+        ow->pushStereoLiveFrame(newFrameHessian->colorMat[0], newFrameHessian_Right->colorMat[0]);
     }
 
     int maxIterations[] = {5, 5, 10, 30, 50};

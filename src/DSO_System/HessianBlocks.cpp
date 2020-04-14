@@ -172,11 +172,6 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
             assert(KERNEL_makeImages_pyrDown.getImpl());
         }
 
-        // Initialize on GPU:
-        std::vector<cv::UMat> colorUMat;
-        std::vector<cv::UMat> dIpUMat;
-        std::vector<cv::UMat> absSquaredGradUMat;
-
         //
         if (BUMat.empty() && setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
         {
@@ -191,13 +186,13 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
         {
             int w = color.cols / std::pow(2, i);
             int h = color.rows / std::pow(2, i);
-            colorUMat.push_back(cv::UMat(h, w, CV_32FC1, cv::UMatUsageFlags::USAGE_DEFAULT));
-            dIpUMat.push_back(cv::UMat(h, w, CV_32FC3, cv::UMatUsageFlags::USAGE_DEFAULT));
-            absSquaredGradUMat.push_back(cv::UMat(h, w, CV_32FC1,
-                                                  cv::UMatUsageFlags::USAGE_DEFAULT));
+            colorUMat[i] = cv::UMat(cv::UMat(h, w, CV_32FC1, cv::UMatUsageFlags::USAGE_DEFAULT));
+            dIpUMat[i] = cv::UMat(cv::UMat(h, w, CV_32FC3, cv::UMatUsageFlags::USAGE_DEFAULT));
+            absSquaredGradUMat[i] = cv::UMat(cv::UMat(h, w, CV_32FC1, cv::UMatUsageFlags::USAGE_DEFAULT));
         }
 
         // Upload the color image:
+        colorMat[0] = color;
         color.copyTo(colorUMat[0]);
 
         bool ksuccess = true;
@@ -276,16 +271,17 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
         for (int lvl = 0; lvl < pyrLevelsUsed; ++lvl)
         {
             // CopyTo 'dowloads' the Mat from GPU memory to the desired location.
+            colorMat[lvl].copyTo(colorMat[lvl]);
             dIpUMat[lvl].copyTo(dIp[lvl]);
             absSquaredGradUMat[lvl].copyTo(absSquaredGrad[lvl]);
         }
 
         // some pointer stuff needs setup here:
-        dI = dIp[0];
-        dI_ptr = dI.ptr<Eigen::Vector3f>();
+        dI_ptr = dIp[0].ptr<Eigen::Vector3f>();
     }
     else
     {
+        colorMat[0] = color;
         cv::Mat zero(hG[0], wG[0], CV_32FC1, cv::Scalar(0.f));
         std::vector<cv::Mat> arr = { color, zero, zero };
         cv::merge(arr, dIp[0]);
@@ -293,12 +289,12 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
 
         for(int i = 1; i < pyrLevelsUsed; i++)
         {
+            colorMat[i] = cv::Mat(hG[i], wG[i], CV_32F);
             dIp[i] = cv::Mat(hG[i], wG[i], CV_32FC3);
             absSquaredGrad[i] = cv::Mat(hG[i], wG[i], CV_32FC1);
         }
 
-        dI = dIp[0];
-        dI_ptr = dI.ptr<Eigen::Vector3f>();
+        dI_ptr = dIp[0].ptr<Eigen::Vector3f>();
 
         // make d0
         int w = wG[0];
@@ -306,58 +302,53 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
 
         for (int lvl = 0; lvl < pyrLevelsUsed; lvl++)
         {
-            int wl = wG[lvl], hl = hG[lvl];
-            Eigen::Vector3f* dI_l = dIp[lvl].ptr<Eigen::Vector3f>();
-
-            float* dabs_l = absSquaredGrad[lvl].ptr<float>();
-
             if (lvl > 0)
             {
-                int lvlm1 = lvl - 1;
-                int wlm1 = wG[lvlm1];
-                Eigen::Vector3f* dI_lm = dIp[lvlm1].ptr<Eigen::Vector3f>();
-
-
-
-                for (int y = 0; y < hl; y++)
-                    for (int x = 0; x < wl; x++)
-                    {
-                        dI_l[x + y * wl][0] = 0.25f * (dI_lm[2 * x + 2 * y * wlm1][0] +
-                                                       dI_lm[2 * x + 1 + 2 * y * wlm1][0] +
-                                                       dI_lm[2 * x + 2 * y * wlm1 + wlm1][0] +
-                                                       dI_lm[2 * x + 1 + 2 * y * wlm1 + wlm1][0]);
-                        dI_l[x + y * wl][1] = 0.f;
-                        dI_l[x + y * wl][2] = 0.f;
-                    }
+                cv::resize(colorMat[lvl - 1], colorMat[lvl], colorMat[lvl].size());
             }
 
-            for (int idx = wl; idx < wl * (hl - 1); idx++)
+            int wl = wG[lvl], hl = hG[lvl];
+            float* col = colorMat[lvl].ptr<float>();
+            Eigen::Vector3f* dI_l = dIp[lvl].ptr<Eigen::Vector3f>();
+            float* dabs_l = absSquaredGrad[lvl].ptr<float>();
+
+            for (int idx = 0; idx < wl * hl; idx++)
             {
-                float dx = 0.5f * (dI_l[idx + 1][0] - dI_l[idx - 1][0]);
-                float dy = 0.5f * (dI_l[idx + wl][0] - dI_l[idx - wl][0]);
-
-
-                if (!std::isfinite(dx))
+                if (idx < wl || idx >= (wl * (hl - 1)))
                 {
-                    dx = 0;
+                    dI_l[idx][0] = col[idx];
+                }
+                else
+                {
+
+                    float dx = 0.5f * (col[idx + 1] - col[idx - 1]);
+                    float dy = 0.5f * (col[idx + wl] - col[idx - wl]);
+
+
+                    if (!std::isfinite(dx))
+                    {
+                        dx = 0;
+                    }
+
+                    if (!std::isfinite(dy))
+                    {
+                        dy = 0;
+                    }
+
+                    dI_l[idx][0] = col[idx];
+                    dI_l[idx][1] = dx;
+                    dI_l[idx][2] = dy;
+
+
+                    dabs_l[idx] = dx * dx + dy * dy;
+
+                    if (setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
+                    {
+                        float gw = HCalib->getBGradOnly((float)(dI_l[idx][0]));
+                        dabs_l[idx] *= gw * gw; // convert to gradient of original color space (before removing response).
+                    }
                 }
 
-                if (!std::isfinite(dy))
-                {
-                    dy = 0;
-                }
-
-                dI_l[idx][1] = dx;
-                dI_l[idx][2] = dy;
-
-
-                dabs_l[idx] = dx * dx + dy * dy;
-
-                if (setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
-                {
-                    float gw = HCalib->getBGradOnly((float)(dI_l[idx][0]));
-                    dabs_l[idx] *= gw * gw; // convert to gradient of original color space (before removing response).
-                }
             }
         }
     }
