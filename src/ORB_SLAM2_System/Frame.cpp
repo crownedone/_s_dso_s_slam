@@ -22,6 +22,7 @@
 #include "Converter.hpp"
 #include "ORBmatcher.hpp"
 #include <thread>
+#include <opencv2/ximgproc.hpp>
 
 namespace ORB_SLAM2
 {

@@ -577,8 +577,6 @@ void PangolinViewer::publishCamPose(const KeyFrameView& kf)
 void PangolinViewer::pushORBFrame(cv::Mat left)
 {
     std::unique_lock<std::mutex> lk(openImagesMutex);
-    displayImage("ORB s", left);
-    waitKey(1);
 
     if (internalORBImg.size() != left.size())
     {

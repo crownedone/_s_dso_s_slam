@@ -160,8 +160,6 @@ src/ORB_SLAM2_System/Sim3Solver.hpp
 src/ORB_SLAM2_System/Sim3Solver.cpp
 src/ORB_SLAM2_System/Initializer.hpp
 src/ORB_SLAM2_System/Initializer.cpp
-#src/ORB_SLAM2_System/Viewer.hpp
-#src/ORB_SLAM2_System/Viewer.cpp
 )
 source_group("System" FILES ${ORB_SLAM_SRC})
 
@@ -171,7 +169,6 @@ add_dependencies(${ORB_SLAM} DBoW2)
 target_link_libraries(${ORB_SLAM}
 ${OpenCV_LIBS}
 ${EIGEN3_LIBS}
-#${Pangolin_LIBRARIES}
 DBoW2
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/bin/g2o.lib
 glog::glog
@@ -273,11 +270,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 add_executable(exe_DSO_SLAM ${PROJECT_SOURCE_DIR}/src/main.cpp ${INPUT_OUTPUT} ${pangolin_SOURCE_FILES})
 target_link_libraries(exe_DSO_SLAM ${DSO} ${ORB_SLAM} ${Pangolin_LIBRARIES} gflags)
 add_dependencies(exe_DSO_SLAM ${DSO} ${ORB_SLAM})
-
-# ORB Slam main
-add_executable(exe_ORB_SLAM ${PROJECT_SOURCE_DIR}/src/rgbd_tum.cpp ${INPUT_OUTPUT})
-target_link_libraries(exe_ORB_SLAM ${ORB_SLAM} gflags)
-add_dependencies(exe_ORB_SLAM ${ORB_SLAM})
 
 # Tests
 add_executable(unit_DSO_SLAM ${PROJECT_SOURCE_DIR}/tests/CatchMain.cpp ${INPUT_OUTPUT} ${dso_TESTS})

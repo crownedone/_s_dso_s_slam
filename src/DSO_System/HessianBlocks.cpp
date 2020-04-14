@@ -166,12 +166,11 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
             KERNEL_makeImages_bGrad = cv::ocl::ProgramSource("makeImages", "bGrad", OCLKernels::KernelBGrad, "");
             KERNEL_makeImages_hessian = cv::ocl::ProgramSource("makeImages", "hessian", OCLKernels::KernelHessian, "");
             KERNEL_makeImages_pyrDown = cv::ocl::ProgramSource("makeImages", "pyrDown", OCLKernels::KernelPyrDown, "");
+
+            assert(KERNEL_makeImages_hessian.getImpl());
+            assert(KERNEL_makeImages_bGrad.getImpl());
+            assert(KERNEL_makeImages_pyrDown.getImpl());
         }
-
-        assert(KERNEL_makeImages_hessian.getImpl());
-        assert(KERNEL_makeImages_bGrad.getImpl());
-        assert(KERNEL_makeImages_pyrDown.getImpl());
-
 
         // Initialize on GPU:
         std::vector<cv::UMat> colorUMat;
@@ -212,7 +211,7 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
                 int kheight = colorUMat[lvl].rows;
                 int inputWidth = colorUMat[lvl - 1].cols;
 
-                ksuccess &= RunKernel("pyrDown", KERNEL_makeImages_pyrDown,
+                ksuccess &= ocl::RunKernel("pyrDown", KERNEL_makeImages_pyrDown,
                 {
                     cv::ocl::KernelArg::PtrReadOnly(colorUMat[lvl - 1]),
                     cv::ocl::KernelArg::Constant(&kwidth, sizeof(int)),
@@ -233,7 +232,7 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
 
             int kwidth = colorUMat[lvl].cols;
             int kheight = colorUMat[lvl].rows;
-            ksuccess &= RunKernel("hessian", KERNEL_makeImages_hessian,
+            ksuccess &= ocl::RunKernel("hessian", KERNEL_makeImages_hessian,
             {
                 cv::ocl::KernelArg::PtrReadOnly(colorUMat[lvl]),
                 cv::ocl::KernelArg::Constant(&kwidth, sizeof(int)),
@@ -254,7 +253,7 @@ void FrameHessian::makeImages(cv::Mat color, CalibHessian* HCalib)
             // Only if needed (if input has BGrad):
             if (!BUMat.empty() && setting_gammaWeightsPixelSelect == 1 && HCalib != 0)
             {
-                ksuccess &= RunKernel("bGrad", KERNEL_makeImages_bGrad,
+                ksuccess &= ocl::RunKernel("bGrad", KERNEL_makeImages_bGrad,
                 {
                     cv::ocl::KernelArg::PtrReadOnly(dIpUMat[lvl]),              // input3f
                     cv::ocl::KernelArg::PtrReadWrite(absSquaredGradUMat[lvl]),   // inputAbsGrad

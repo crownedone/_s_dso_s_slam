@@ -831,7 +831,7 @@ Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh)
 
     if (!haveOneGood)
     {
-        printf("BIG ERROR! tracking failed entirely. Take predictred pose and hope we may somehow recover.\n");
+        LOG_ERROR("BIG ERROR! tracking failed entirely. Take predictred pose and hope we may somehow recover.");
         flowVecs = Vec3(0, 0, 0);
         aff_g2l = aff_last_2_l;
         lastF_2_fh = lastF_2_fh_tries[0];
@@ -851,12 +851,8 @@ Vec4 FullSystem::trackNewCoarse(std::shared_ptr<FrameHessian> fh)
         coarseTracker->firstCoarseRMSE = achievedRes[0];
     }
 
-    if (!setting_debugout_runquiet)
-    {
-        LOG_INFO("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
-    }
-
-
+    LOG_INFO_IF(!setting_debugout_runquiet, "Coarse Tracker tracked ab = %f %f (exp %f). Res %f!", aff_g2l.a, aff_g2l.b,
+                fh->ab_exposure, achievedRes[0]);
 
     if (setting_logStuff)
     {
@@ -1788,7 +1784,7 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
     fh->ab_exposure = image->exposure_time;
     fh->makeImages(image->image, &Hcalib);
 
-    LOG_INFO("MakeImages: %f [ms]", sw.stop());
+    LOG_INFO("MakeImages: %f [ms]", sw.restart());
 
 
     if (!initialized)
@@ -1820,13 +1816,12 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
         if (coarseTracker_forNewKF->refFrameID > coarseTracker->refFrameID)
         {
             boost::unique_lock<boost::mutex> crlock(coarseTrackerSwapMutex);
-            CoarseTracker* tmp = coarseTracker;
-            coarseTracker = coarseTracker_forNewKF;
-            coarseTracker_forNewKF = tmp;
+            std::swap(coarseTracker, coarseTracker_forNewKF);
         }
 
 
         Vec4 tres = trackNewCoarse(fh);
+        LOG_INFO("TrackCoarse: %f [ms]", sw.restart());
 
         if (!std::isfinite((double)tres[0]) || !std::isfinite((double)tres[1]) || !std::isfinite((double)tres[2]) ||
             !std::isfinite((double)tres[3]))
@@ -1859,8 +1854,6 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
         }
 
 
-
-
         for (auto& ow : outputWrapper)
         {
             ::Viewer::KeyFrameView kfv;
@@ -1874,8 +1867,6 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
             kfv.fy = Hcalib.fyl();
             ow->publishCamPose(kfv);
         }
-
-
 
 
         lock.unlock();

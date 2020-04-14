@@ -38,6 +38,8 @@
 #include "OptimizationBackend/EnergyFunctionalStructs.hpp"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include "OpenCL/OpenCLHelper.hpp"
+#include "OpenCL/KERNELS.hpp"
 
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
@@ -926,17 +928,153 @@ void CoarseTracker::calcGSSSE(int lvl, Mat88& H_out, Vec8& b_out, const SE3& ref
 }
 
 
+void residualKernel(int kWidth, float* in_id, float* in_x, float* in_y, Vec9f RKi, Vec3f t, Vec2f affLL, Vec4f fxfycxcy, int lvl,
+                    Vec9f Ki, int wl, int hl, float* lpc_color, float* dINewl, float cutoffTH, float maxEnergy,
+                    int* numTermsInWarped, // unique counter
+                    float* buf_warped_idepth, float* buf_warped_u, float* buf_warped_v, float* buf_warped_dx, float* buf_warped_dy,
+                    float* buf_warped_residual,
+                    float* buf_warped_weight, float* buf_warped_refColor, Vec6* rs) // Results
+{
+    for (int i = 0; i < kWidth; ++i)
+    {
+        float id = in_id[i];
+        float x = in_x[i];
+        float y = in_y[i];
+
+        Vec3f pt;
+        pt <<
+           RKi[0] * x + RKi[1] * y + RKi[2] * 1 + t[0] * id,
+               RKi[3] * x + RKi[4] * y + RKi[5] * 1 + t[1] * id,
+               RKi[6] * x + RKi[7] * y + RKi[8] * 1 + t[2] * id;
+
+        float u = pt[0] / pt[2];
+        float v = pt[1] / pt[2];
+        float Ku = fxfycxcy[0] * u + fxfycxcy[2];
+        float Kv = fxfycxcy[1] * v + fxfycxcy[3];
+        float new_idepth = id / pt[2];
+        //LOG_INFO("Ku & Kv are: %f, %f; x and y are: %f, %f", Ku, Kv, x, y);
+
+        if (lvl == 0 && i % 32 == 0)
+        {
+            // translation only (positive)
+            Vec3f ptT;
+            ptT << Ki[0] * x + Ki[1] * y + Ki[2] * 1 + t[0] * id,
+                Ki[3] * x + Ki[4] * y + Ki[5] * 1 + t[1] * id,
+                Ki[6] * x + Ki[7] * y + Ki[8] * 1 + t[2] * id;
+
+            float uT = ptT[0] / ptT[2];
+            float vT = ptT[1] / ptT[2];
+            float KuT = fxfycxcy[0] * uT + fxfycxcy[2];
+            float KvT = fxfycxcy[1] * vT + fxfycxcy[3];
+
+            // translation only (negative)
+            Vec3f ptT2;
+            ptT2 << Ki[0] * x + Ki[1] * y + Ki[2] * 1 - t[0] * id,
+                 Ki[3] * x + Ki[4] * y + Ki[5] * 1 - t[1] * id,
+                 Ki[6] * x + Ki[7] * y + Ki[8] * 1 - t[2] * id;
+
+            float uT2 = ptT2[0] / ptT2[2];
+            float vT2 = ptT2[1] / ptT2[2];
+            float KuT2 = fxfycxcy[0] * uT2 + fxfycxcy[2];
+            float KvT2 = fxfycxcy[1] * vT2 + fxfycxcy[3];
+
+            //translation and rotation (negative)
+            Vec3f pt3;
+            pt3 << RKi[0] * x + RKi[1] * y + RKi[2] * 1 - t[0] * id,
+                RKi[3] * x + RKi[4] * y + RKi[5] * 1 - t[1] * id,
+                RKi[6] * x + RKi[7] * y + RKi[8] * 1 - t[2] * id;
+
+            float u3 = pt3[0] / pt3[2];
+            float v3 = pt3[1] / pt3[2];
+            float Ku3 = fxfycxcy[0] * u3 + fxfycxcy[2];
+            float Kv3 = fxfycxcy[1] * v3 + fxfycxcy[3];
+
+            //translation and rotation (positive)
+            //already have it.
+            (*rs)[2] += (KuT - x) * (KuT - x) + (KvT - y) * (KvT - y);
+            (*rs)[2] += (KuT2 - x) * (KuT2 - x) + (KvT2 - y) * (KvT2 - y);
+            (*rs)[4] += (Ku - x) * (Ku - x) + (Kv - y) * (Kv - y);
+            (*rs)[4] += (Ku3 - x) * (Ku3 - x) + (Kv3 - y) * (Kv3 - y);
+            (*rs)[3] += 2;
+        }
+
+        if (!(Ku > 2 && Kv > 2 && Ku < wl - 3 && Kv < hl - 3 && new_idepth > 0))
+        {
+            continue;
+        }
+
+        float refColor = lpc_color[i];
+        Vec3f hitColor;
+        {
+            int ix = (int)Ku;
+            int iy = (int)Kv;
+            float dx = Ku - ix;
+            float dy = Kv - iy;
+            float dxdy = dx * dy;
+            const float* bp = dINewl + 3 * (ix + iy * wl);
+
+            hitColor << dxdy * (*(bp + 3 * (1 + wl)))
+                     + (dy - dxdy) * (*(bp + 3 * wl))
+                     + (dx - dxdy) * (*(bp + 3))
+                     + (1 - dx - dy + dxdy) * (*bp),
+                     dxdy* (*(bp + 3 * (1 + wl) + 1))
+                     + (dy - dxdy) * (*(bp + 3 * wl + 1))
+                     + (dx - dxdy) * (*(bp + 3 + 1))
+                     + (1 - dx - dy + dxdy) * (*(bp + 1)),
+                     dxdy* (*(bp + 3 * (1 + wl) + 2))
+                     + (dy - dxdy) * (*(bp + 3 * wl + 2))
+                     + (dx - dxdy) * (*(bp + 3 + 2))
+                     + (1 - dx - dy + dxdy) * (*(bp + 2));
+
+            //LOG_INFO_IF(i == 0, "%f,%f,%f", hitColor[0], hitColor[1], hitColor[2]);
+        }
+
+        if (!std::isfinite((float)hitColor[0]))
+        {
+            continue;
+        }
+
+        float residual = hitColor[0] - (float)(affLL[0] * refColor + affLL[1]);
+        //Huber weight
+        float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+
+
+        if (fabs(residual) > cutoffTH)
+        {
+            (*rs)[0] += maxEnergy;
+            (*rs)[1]++;
+            (*rs)[5]++;
+        }
+        else
+        {
+            (*rs)[0] += hw * residual * residual * (2 - hw);
+            (*rs)[1]++;
+
+            buf_warped_idepth[*numTermsInWarped] = new_idepth;
+            buf_warped_u[*numTermsInWarped] = u;
+            buf_warped_v[*numTermsInWarped] = v;
+            buf_warped_dx[*numTermsInWarped] = hitColor[1];
+            buf_warped_dy[*numTermsInWarped] = hitColor[2];
+            buf_warped_residual[*numTermsInWarped] = residual;
+            buf_warped_weight[*numTermsInWarped] = hw;
+            buf_warped_refColor[*numTermsInWarped] = lpc_color[i];
+            (*numTermsInWarped)++;
+        }
+    }
+}
+
+cv::ocl::ProgramSource KERNEL_calcRes;
+cv::UMat Uidepth, Ulpc_u, Ulpc_v, Ulpc_color;
+cv::UMat UAtomicCounter;
+cv::UMat Uwp, Urs;
+
 Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, float cutoffTH)
 {
     debugPlot = false;
-    float E = 0;
-    int numTermsInE = 0;
-    int numTermsInWarped = 0;
-    int numSaturated = 0;
+
 
     int wl = w[lvl];
     int hl = h[lvl];
-    Eigen::Vector3f* dINewl = newFrame->dIp[lvl].ptr<Eigen::Vector3f>();
     float fxl = fx[lvl];
     float fyl = fy[lvl];
     float cxl = cx[lvl];
@@ -969,106 +1107,249 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
 
     //LOG_INFO("the num of the points is: %d", nl);
 
-    for(int i = 0; i < nl; i++)
+    Vec6 rs = Vec6::Zero();
+    int numTermsInWarped = 0;
+
+    if (true)
     {
-        float id = lpc_idepth[i];
-        float x = lpc_u[i];
-        float y = lpc_v[i];
+        Vec9f RKi_;
+        RKi_ << RKi(0, 0), RKi(0, 1), RKi(0, 2),
+             RKi(1, 0), RKi(1, 1), RKi(1, 2),
+             RKi(2, 0), RKi(2, 1), RKi(2, 2);
+        Vec4f fxfycxcy;
+        fxfycxcy << fxl, fyl, cxl, cyl;
+        Vec9f Ki_;
+        Ki_ << Ki[lvl](0, 0), Ki[lvl](0, 1), Ki[lvl](0, 2),
+            Ki[lvl](1, 0), Ki[lvl](1, 1), Ki[lvl](1, 2),
+            Ki[lvl](2, 0), Ki[lvl](2, 1), Ki[lvl](2, 2);
 
-        Vec3f pt = RKi * Vec3f(x, y, 1) + t * id;
-        float u = pt[0] / pt[2];
-        float v = pt[1] / pt[2];
-        float Ku = fxl * u + cxl;
-        float Kv = fyl * v + cyl;
-        float new_idepth = id / pt[2];
-        //LOG_INFO("Ku & Kv are: %f, %f; x and y are: %f, %f", Ku, Kv, x, y);
+        float* dINewl = newFrame->dIp[lvl].ptr<float>(); // actually Vec3f
+        residualKernel(nl, lpc_idepth, lpc_u, lpc_v, RKi_, t, affLL, fxfycxcy, lvl, Ki_, wl, hl, lpc_color,
+                       dINewl, cutoffTH, maxEnergy, &numTermsInWarped, buf_warped_idepth, buf_warped_u, buf_warped_v,
+                       buf_warped_dx, buf_warped_dy, buf_warped_residual, buf_warped_weight,
+                       buf_warped_refColor, &rs);
 
-        if(lvl == 0 && i % 32 == 0)
+        if (setting_UseOpenCL)
         {
-            // translation only (positive)
-            Vec3f ptT = Ki[lvl] * Vec3f(x, y, 1) + t * id;
-            float uT = ptT[0] / ptT[2];
-            float vT = ptT[1] / ptT[2];
-            float KuT = fxl * uT + cxl;
-            float KvT = fyl * vT + cyl;
-
-            // translation only (negative)
-            Vec3f ptT2 = Ki[lvl] * Vec3f(x, y, 1) - t * id;
-            float uT2 = ptT2[0] / ptT2[2];
-            float vT2 = ptT2[1] / ptT2[2];
-            float KuT2 = fxl * uT2 + cxl;
-            float KvT2 = fyl * vT2 + cyl;
-
-            //translation and rotation (negative)
-            Vec3f pt3 = RKi * Vec3f(x, y, 1) - t * id;
-            float u3 = pt3[0] / pt3[2];
-            float v3 = pt3[1] / pt3[2];
-            float Ku3 = fxl * u3 + cxl;
-            float Kv3 = fyl * v3 + cyl;
-
-            //translation and rotation (positive)
-            //already have it.
-
-            sumSquaredShiftT += (KuT - x) * (KuT - x) + (KvT - y) * (KvT - y);
-            sumSquaredShiftT += (KuT2 - x) * (KuT2 - x) + (KvT2 - y) * (KvT2 - y);
-            sumSquaredShiftRT += (Ku - x) * (Ku - x) + (Kv - y) * (Kv - y);
-            sumSquaredShiftRT += (Ku3 - x) * (Ku3 - x) + (Kv3 - y) * (Kv3 - y);
-            sumSquaredShiftNum += 2;
-        }
-
-        if(!(Ku > 2 && Kv > 2 && Ku < wl - 3 && Kv < hl - 3 && new_idepth > 0))
-        {
-            continue;
-        }
-
-
-
-        float refColor = lpc_color[i];
-        Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
-
-        if(!std::isfinite((float)hitColor[0]))
-        {
-            continue;
-        }
-
-        float residual = hitColor[0] - (float)(affLL[0] * refColor + affLL[1]);
-        //Huber weight
-        float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
-
-
-        if(fabs(residual) > cutoffTH)
-        {
-            if(debugPlot)
+            // First time create kernels
+            if (!KERNEL_calcRes.getImpl())
             {
-                cv::circle(resImage, cv::Point(lpc_u[i], lpc_v[i]), 2, cv::Scalar(0, 0, 255));
+                KERNEL_calcRes = cv::ocl::ProgramSource("coarseTracker", "calcRes", OCLKernels::KernelCalcRes, "");
+                assert(!KERNEL_calcRes.getImpl());
+                UAtomicCounter = cv::UMat(1, 1, CV_32SC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+                Uwp = cv::UMat(1, h[0] * w[0] * 8, CV_32F, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+                Urs = cv::UMat(1, 6 * h[0] * w[0], CV_32F, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
             }
 
-            E += maxEnergy;
-            numTermsInE++;
-            numSaturated++;
-        }
-        else
-        {
-            if(debugPlot)
+
+            // init to zero:
+            UAtomicCounter.setTo(cv::Scalar::all(0));
+            Urs.setTo(cv::Scalar::all(0));
+
+            int kwidth = nl;
+            size_t nll = nl;
+            // Upload buffers
+            cv::Mat(1, hl * wl, CV_32F, lpc_idepth, cv::Mat::AUTO_STEP).copyTo(Uidepth);
+            cv::Mat(1, hl * wl, CV_32F, lpc_u, cv::Mat::AUTO_STEP).copyTo(Ulpc_u);
+            cv::Mat(1, hl * wl, CV_32F, lpc_v, cv::Mat::AUTO_STEP).copyTo(Ulpc_v);
+            cv::Mat(1, hl * wl, CV_32F, lpc_color, cv::Mat::AUTO_STEP).copyTo(Ulpc_color);
+
+            std::array<float, 16> RKI_t_fxfycxcy =
             {
-                cv::circle(resImage, cv::Point(lpc_u[i], lpc_v[i]), 2,
-                           cv::Scalar(residual + 128, residual + 128, residual + 128));
+                RKi(0, 0), RKi(0, 1), RKi(0, 2), t[0],
+                RKi(1, 0), RKi(1, 1), RKi(1, 2), t[1],
+                RKi(2, 0), RKi(2, 1), RKi(2, 2), t[2],
+                fxl, fyl, cxl, cyl
+            };
+            std::array<float, 16> Ki_affL_cutoffTH_maxEnergy =
+            {
+                Ki[lvl](0, 0), Ki[lvl](0, 1), Ki[lvl](0, 2), affLL[0],
+                Ki[lvl](1, 0), Ki[lvl](1, 1), Ki[lvl](1, 2), affLL[1],
+                Ki[lvl](2, 0), Ki[lvl](2, 1), Ki[lvl](2, 2), 0.f,
+                cutoffTH, maxEnergy, setting_huberTH, 0.f
+            };
+            std::array<int, 4> kWidth_wl_hl_lvl =
+            {
+                nl, wl, hl, lvl
+            };
+            ocl::RunKernel("calcRes", KERNEL_calcRes,
+            {
+                cv::ocl::KernelArg::PtrReadOnly(Uidepth),
+                cv::ocl::KernelArg::PtrReadOnly(Ulpc_u),
+                cv::ocl::KernelArg::PtrReadOnly(Ulpc_v),
+                cv::ocl::KernelArg::Constant(&RKI_t_fxfycxcy, sizeof(float) * 16),
+                cv::ocl::KernelArg::Constant(&Ki_affL_cutoffTH_maxEnergy, sizeof(float) * 16),
+                cv::ocl::KernelArg::Constant(&kWidth_wl_hl_lvl, sizeof(float) * 4),
+                cv::ocl::KernelArg::PtrReadOnly(Ulpc_color),
+                cv::ocl::KernelArg::PtrReadOnly(newFrame->dIp[lvl].getUMat(cv::AccessFlag::ACCESS_READ)),
+                cv::ocl::KernelArg::PtrReadWrite(UAtomicCounter),
+                cv::ocl::KernelArg::PtrWriteOnly(Uwp),
+                cv::ocl::KernelArg::PtrReadWrite(Urs)
+            }, { nll }, 1);
+
+            // download buffers:
+            cv::Mat aCounter;
+            UAtomicCounter.copyTo(aCounter);
+            numTermsInWarped = *(aCounter.ptr<int>());
+            cv::Mat warped;
+            // copy only the range we want.
+            Uwp(cv::Range(0, 1), cv::Range(0, numTermsInWarped)).copyTo(warped);
+            float* warpedPtr = warped.ptr<float>();
+
+            for (int i = 0; i < numTermsInWarped; ++i)
+            {
+                buf_warped_idepth[i] = warpedPtr[8 * i + 0];
+                buf_warped_u[i] = warpedPtr[8 * i + 1];
+                buf_warped_v[i] = warpedPtr[8 * i + 2];
+                buf_warped_dx[i] = warpedPtr[8 * i + 3];
+                buf_warped_dy[i] = warpedPtr[8 * i + 4];
+                buf_warped_residual[i] = warpedPtr[8 * i + 5];
+                buf_warped_weight[i] = warpedPtr[8 * i + 6];
+                buf_warped_refColor[i] = warpedPtr[8 * i + 7];
             }
 
-            E += hw * residual * residual * (2 - hw);
-            numTermsInE++;
+            cv::Mat rsMat;
+            Urs(cv::Range(0, 1), cv::Range(0, nl * 6)).copyTo(rsMat);
+            float* rsMatPtr = rsMat.ptr<float>();
 
-            buf_warped_idepth[numTermsInWarped] = new_idepth;
-            buf_warped_u[numTermsInWarped] = u;
-            buf_warped_v[numTermsInWarped] = v;
-            buf_warped_dx[numTermsInWarped] = hitColor[1];
-            buf_warped_dy[numTermsInWarped] = hitColor[2];
-            buf_warped_residual[numTermsInWarped] = residual;
-            buf_warped_weight[numTermsInWarped] = hw;
-            buf_warped_refColor[numTermsInWarped] = lpc_color[i];
-            numTermsInWarped++;
+            for (int i = 0; i < nl; ++i)
+            {
+                rs[0] += rsMatPtr[i * 6 + 0];
+                rs[1] += rsMatPtr[i * 6 + 1];
+                rs[2] += rsMatPtr[i * 6 + 2];
+                rs[3] += rsMatPtr[i * 6 + 3];
+                rs[4] += rsMatPtr[i * 6 + 4];
+                rs[5] += rsMatPtr[i * 6 + 5];
+            }
         }
+
+
+
+
+        // Global stuff
+        // We temporarily misused some entries
+        rs[2] /= (rs[3] + 0.1);
+        rs[4] /= (rs[3] + 0.1);
+        rs[3] = 0;
+        rs[5] /= (float)(rs[1]);
     }
+    else
+    {
+        Eigen::Vector3f* dINewl = newFrame->dIp[lvl].ptr<Eigen::Vector3f>();
+        float E = 0;
+        int numTermsInE = 0;
+        int numSaturated = 0;
+
+        for(int i = 0; i < nl; i++)
+        {
+            float id = lpc_idepth[i];
+            float x = lpc_u[i];
+            float y = lpc_v[i];
+
+            Vec3f pt = RKi * Vec3f(x, y, 1) + t * id;
+            float u = pt[0] / pt[2];
+            float v = pt[1] / pt[2];
+            float Ku = fxl * u + cxl;
+            float Kv = fyl * v + cyl;
+            float new_idepth = id / pt[2];
+            //LOG_INFO("Ku & Kv are: %f, %f; x and y are: %f, %f", Ku, Kv, x, y);
+
+            if(lvl == 0 && i % 32 == 0)
+            {
+                // translation only (positive)
+                Vec3f ptT = Ki[lvl] * Vec3f(x, y, 1) + t * id;
+                float uT = ptT[0] / ptT[2];
+                float vT = ptT[1] / ptT[2];
+                float KuT = fxl * uT + cxl;
+                float KvT = fyl * vT + cyl;
+
+                // translation only (negative)
+                Vec3f ptT2 = Ki[lvl] * Vec3f(x, y, 1) - t * id;
+                float uT2 = ptT2[0] / ptT2[2];
+                float vT2 = ptT2[1] / ptT2[2];
+                float KuT2 = fxl * uT2 + cxl;
+                float KvT2 = fyl * vT2 + cyl;
+
+                //translation and rotation (negative)
+                Vec3f pt3 = RKi * Vec3f(x, y, 1) - t * id;
+                float u3 = pt3[0] / pt3[2];
+                float v3 = pt3[1] / pt3[2];
+                float Ku3 = fxl * u3 + cxl;
+                float Kv3 = fyl * v3 + cyl;
+
+                //translation and rotation (positive)
+                //already have it.
+
+                sumSquaredShiftT += (KuT - x) * (KuT - x) + (KvT - y) * (KvT - y);
+                sumSquaredShiftT += (KuT2 - x) * (KuT2 - x) + (KvT2 - y) * (KvT2 - y);
+                sumSquaredShiftRT += (Ku - x) * (Ku - x) + (Kv - y) * (Kv - y);
+                sumSquaredShiftRT += (Ku3 - x) * (Ku3 - x) + (Kv3 - y) * (Kv3 - y);
+                sumSquaredShiftNum += 2;
+            }
+
+            if(!(Ku > 2 && Kv > 2 && Ku < wl - 3 && Kv < hl - 3 && new_idepth > 0))
+            {
+                continue;
+            }
+
+
+
+            float refColor = lpc_color[i];
+            Vec3f hitColor = getInterpolatedElement33(dINewl, Ku, Kv, wl);
+            //LOG_INFO_IF(i == 0, "%f,%f,%f", hitColor[0], hitColor[1], hitColor[2]);
+
+            if(!std::isfinite((float)hitColor[0]))
+            {
+                continue;
+            }
+
+            float residual = hitColor[0] - (float)(affLL[0] * refColor + affLL[1]);
+            //Huber weight
+            float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
+
+
+            if(fabs(residual) > cutoffTH)
+            {
+                if(debugPlot)
+                {
+                    cv::circle(resImage, cv::Point(lpc_u[i], lpc_v[i]), 2, cv::Scalar(0, 0, 255));
+                }
+
+                E += maxEnergy;
+                numTermsInE++;
+                numSaturated++;
+            }
+            else
+            {
+                if(debugPlot)
+                {
+                    cv::circle(resImage, cv::Point(lpc_u[i], lpc_v[i]), 2,
+                               cv::Scalar(residual + 128, residual + 128, residual + 128));
+                }
+
+                E += hw * residual * residual * (2 - hw);
+                numTermsInE++;
+
+                buf_warped_idepth[numTermsInWarped] = new_idepth;
+                buf_warped_u[numTermsInWarped] = u;
+                buf_warped_v[numTermsInWarped] = v;
+                buf_warped_dx[numTermsInWarped] = hitColor[1];
+                buf_warped_dy[numTermsInWarped] = hitColor[2];
+                buf_warped_residual[numTermsInWarped] = residual;
+                buf_warped_weight[numTermsInWarped] = hw;
+                buf_warped_refColor[numTermsInWarped] = lpc_color[i];
+                numTermsInWarped++;
+            }
+        }
+
+        rs[0] = E;
+        rs[1] = numTermsInE;
+        rs[2] = sumSquaredShiftT / (sumSquaredShiftNum + 0.1);
+        rs[3] = 0;
+        rs[4] = sumSquaredShiftRT / (sumSquaredShiftNum + 0.1);
+        rs[5] = numSaturated / (float)numTermsInE;
+    }
+
 
     while(numTermsInWarped % 4 != 0)
     {
@@ -1092,14 +1373,7 @@ Vec6 CoarseTracker::calcRes(int lvl, const SE3& refToNew, AffLight aff_g2l, floa
         Viewer::waitKey(1);
     }
 
-    Vec6 rs;
-    rs[0] = E;
-    rs[1] = numTermsInE;
-    rs[2] = sumSquaredShiftT / (sumSquaredShiftNum + 0.1);
-    rs[3] = 0;
-    rs[4] = sumSquaredShiftRT / (sumSquaredShiftNum + 0.1);
-    rs[5] = numSaturated / (float)numTermsInE;
-
+    LOG_INFO("Residual: %f, %f, %f, %f, %f, %f", rs[0], rs[1], rs[2], rs[3], rs[4], rs[5]);
     return rs;
 }
 
@@ -1380,8 +1654,6 @@ bool CoarseTracker::trackNewestCoarse(
     return true;
 }
 
-
-
 void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
                                        std::vector<std::shared_ptr<Viewer::Output3D>>& wraps)
 {
@@ -1514,7 +1786,7 @@ void CoarseTracker::debugPlotIDepthMap(float* minID_pt, float* maxID_pt,
                 if(bp[0] > 0 || nid >= 3)
                 {
                     float id = ((sid / nid) - minID) / ((maxID - minID));
-                    cv::circle(mf, cv::Point(x, y), 3, makeJet3B(id));
+                    cv::circle(mf, cv::Point(x, y), 2, makeJet3B(id));
                 }
             }
 

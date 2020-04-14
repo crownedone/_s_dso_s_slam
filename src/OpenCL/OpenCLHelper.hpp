@@ -4,6 +4,8 @@
 #include <opencv2/core/ocl.hpp>
 #include "Logging.hpp"
 
+namespace ocl
+{
 // Simple 'run a kernel' abstraction
 inline bool RunKernel(const std::string& name, cv::ocl::ProgramSource& KProg,
                       std::initializer_list<cv::ocl::KernelArg> args, std::array<size_t, 3> workSize, int nDim = 2, bool sync = false,
@@ -34,4 +36,6 @@ inline bool RunKernel(const std::string& name, cv::ocl::ProgramSource& KProg,
 
     return k.run(nDim, workSize.data(), NULL, sync, queue);
 }
+}
+
 
