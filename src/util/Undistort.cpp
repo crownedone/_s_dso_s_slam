@@ -36,6 +36,11 @@
 #include "util/Undistort.hpp"
 #include <opencv2/imgcodecs.hpp>
 
+#include <OpenCL/KERNELS.hpp>
+#include <OpenCL/OpenCLHelper.hpp>
+
+#include <opencv2/imgproc.hpp>
+
 namespace dso
 {
 
@@ -50,6 +55,7 @@ PhotometricUndistorter::PhotometricUndistorter(
     vignetteMapInv = 0;
     w = w_;
     h = h_;
+    wh = w * h;
     output = new ImageAndExposure(w, h);
 
     if(file == "" || vignetteImage == "")
@@ -216,7 +222,6 @@ PhotometricUndistorter::~PhotometricUndistorter()
     delete output;
 }
 
-
 void PhotometricUndistorter::unMapFloatImage(float* image)
 {
     int wh = w * h;
@@ -252,6 +257,78 @@ void PhotometricUndistorter::unMapFloatImage(float* image)
     }
 }
 
+cv::ocl::ProgramSource KERNEL_photometrics;
+cv::ocl::ProgramSource KERNEL_photometricsVignette;
+
+void PhotometricUndistorter::processFrame(const cv::UMat& image_in, float exposure_time,
+                                          float factor)
+{
+    // type as string to be inserted into kernel
+    std::string typestr = image_in.type() == CV_8U ? "uchar" : "ushort";
+
+    if (!valid || exposure_time <= 0 ||
+        setting_photometricCalibration == 0) // disable full photometric calibration.
+    {
+        image_in.convertTo(output->image_gpu, CV_32FC1, factor);
+    }
+    else
+    {
+        if (!KERNEL_photometrics.getImpl())
+        {
+            // build the kernel for the specific type we need as input
+            KERNEL_photometrics = cv::ocl::ProgramSource("undistort", "photometrics", OCLKernels::KernelPhoto,
+                                                         cv::format("-D ITYPE=%s", typestr.c_str()));
+            KERNEL_photometricsVignette = cv::ocl::ProgramSource("undistort", "photometricsV", OCLKernels::KernelPhotoV,
+                                          cv::format("-D ITYPE=%s", typestr.c_str()));
+
+            assert(KERNEL_photometrics.getImpl());
+            assert(KERNEL_photometricsVignette.getImpl());
+        }
+
+        // initialize buffers:
+        if (G_umat.empty())
+        {
+            // upload G
+            cv::Mat(1, 256 * 256, CV_32FC1, G, cv::Mat::AUTO_STEP).copyTo(G_umat);
+
+            // upload vignette
+            if (!vignetteMapInv.empty())
+            {
+                vignetteMapInv.copyTo(vignetteMapInv_umat);
+            }
+        }
+
+        cv::UMat out(image_in.rows, image_in.cols, CV_32FC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+        if (setting_photometricCalibration == 2)
+        {
+            ocl::RunKernel("photometricsV", KERNEL_photometricsVignette,
+            {
+                cv::ocl::KernelArg::PtrReadOnly(image_in),
+                cv::ocl::KernelArg::Constant(&wh, sizeof(int)),
+                cv::ocl::KernelArg::PtrReadOnly(G_umat),
+                cv::ocl::KernelArg::PtrWriteOnly(out)
+            }, {(size_t)(w * h)}, 1);
+        }
+        else
+        {
+            ocl::RunKernel("photometrics", KERNEL_photometrics,
+            {
+                cv::ocl::KernelArg::PtrReadOnly(image_in),
+                cv::ocl::KernelArg::Constant(&wh, sizeof(int)),
+                cv::ocl::KernelArg::PtrReadOnly(G_umat),
+                cv::ocl::KernelArg::PtrReadOnly(vignetteMapInv_umat),
+                cv::ocl::KernelArg::PtrWriteOnly(out)
+            }, {(size_t)(w * h)}, 1);
+        }
+
+        output->image_gpu = out;
+    }
+
+    output->timestamp = 0;
+    output->exposure_time = setting_useExposure ? exposure_time : 1;
+}
+
 
 void PhotometricUndistorter::processFrame(const cv::Mat& image_in, float exposure_time,
                                           float factor)
@@ -283,17 +360,20 @@ void PhotometricUndistorter::processFrame(const cv::Mat& image_in, float exposur
     if(!valid || exposure_time <= 0 ||
        setting_photometricCalibration == 0) // disable full photometric calibration.
     {
-        for(int i = 0; i < wh; i++)
-        {
-            if (inDataC)
-            {
-                data[i] = factor * inDataC[i];
-            }
-            else if (inDataS)
-            {
-                data[i] = factor * inDataS[i];
-            }
-        }
+        // Should do exactly the same
+        image_in.convertTo(output->image, CV_32FC1, factor);
+
+        //for(int i = 0; i < wh; i++)
+        //{
+        //    if (inDataC)
+        //    {
+        //        data[i] = factor * inDataC[i];
+        //    }
+        //    else if (inDataS)
+        //    {
+        //        data[i] = factor * inDataS[i];
+        //    }
+        //}
 
         output->exposure_time = exposure_time;
         output->timestamp = 0;
@@ -516,115 +596,156 @@ std::shared_ptr<ImageAndExposure> Undistort::undistort(const cv::Mat& image_raw,
         exit(1);
     }
 
-    photometricUndist->processFrame(image_raw, exposure, factor);
+
     std::shared_ptr<ImageAndExposure> result = std::make_shared<ImageAndExposure>(w, h, timestamp);
-    photometricUndist->output->copyMetaTo(*result);
 
-    if (!passthrough)
+    if (setting_UseOpenCL)
     {
-        float* out_data = reinterpret_cast<float*>(result->image.data);
-        float* in_data = reinterpret_cast<float*>(photometricUndist->output->image.data);
-
-        float* noiseMapX = 0;
-        float* noiseMapY = 0;
-
-        if(benchmark_varNoise > 0)
+        if (!passthrough)
         {
-            int numnoise = (benchmark_noiseGridsize + 8) * (benchmark_noiseGridsize + 8);
-            noiseMapX = new float[numnoise];
-            noiseMapY = new float[numnoise];
-            memset(noiseMapX, 0, sizeof(float)*numnoise);
-            memset(noiseMapY, 0, sizeof(float)*numnoise);
-
-            for(int i = 0; i < numnoise; i++)
-            {
-                noiseMapX[i] =  2 * benchmark_varNoise * (rand() / (float)RAND_MAX - 0.5f);
-                noiseMapY[i] =  2 * benchmark_varNoise * (rand() / (float)RAND_MAX - 0.5f);
-            }
+            cv::UMat uin;
+            image_raw.copyTo(uin);
+            photometricUndist->processFrame(uin, exposure, factor);
+            cv::remap(photometricUndist->output->image_gpu, result->image_gpu,
+                      remapX_umat,
+                      remapY_umat,
+                      cv::InterpolationFlags::INTER_LINEAR);
+        }
+        else
+        {
+            photometricUndist->output->image_gpu.copyTo(result->image_gpu);
         }
 
-
-        for(int idx = w * h - 1; idx >= 0; idx--)
-        {
-            // get interp. values
-            float xx = remapX[idx];
-            float yy = remapY[idx];
-
-
-
-            if(benchmark_varNoise > 0)
-            {
-                float deltax = getInterpolatedElement11BiCub(noiseMapX,
-                                                             4 + (xx / (float)wOrg) * benchmark_noiseGridsize, 4 + (yy / (float)hOrg) * benchmark_noiseGridsize,
-                                                             benchmark_noiseGridsize + 8 );
-                float deltay = getInterpolatedElement11BiCub(noiseMapY,
-                                                             4 + (xx / (float)wOrg) * benchmark_noiseGridsize, 4 + (yy / (float)hOrg) * benchmark_noiseGridsize,
-                                                             benchmark_noiseGridsize + 8 );
-                float x = idx % w + deltax;
-                float y = idx / w + deltay;
-
-                if(x < 0.01)
-                {
-                    x = 0.01;
-                }
-
-                if(y < 0.01)
-                {
-                    y = 0.01;
-                }
-
-                if(x > w - 1.01)
-                {
-                    x = w - 1.01;
-                }
-
-                if(y > h - 1.01)
-                {
-                    y = h - 1.01;
-                }
-
-                xx = getInterpolatedElement(remapX, x, y, w);
-                yy = getInterpolatedElement(remapY, x, y, w);
-            }
-
-
-            if(xx < 0)
-            {
-                out_data[idx] = 0;
-            }
-            else
-            {
-                // get integer and rational parts
-                int xxi = xx;
-                int yyi = yy;
-                xx -= xxi;
-                yy -= yyi;
-                float xxyy = xx * yy;
-
-                // get array base pointer
-                const float* src = in_data + xxi + yyi * wOrg;
-
-                // interpolate (bilinear)
-                out_data[idx] =  xxyy * src[1 + wOrg]
-                                 + (yy - xxyy) * src[wOrg]
-                                 + (xx - xxyy) * src[1]
-                                 + (1 - xx - yy + xxyy) * src[0];
-            }
-        }
-
-        if(benchmark_varNoise > 0)
-        {
-            delete[] noiseMapX;
-            delete[] noiseMapY;
-        }
-
+        result->image_gpu.convertTo(result->image8u_umat, CV_8U, 0.8);
     }
     else
     {
-        photometricUndist->output->image.copyTo(result->image);
+        photometricUndist->processFrame(image_raw, exposure, factor);
+
+        if (!passthrough)
+        {
+            cv::remap(photometricUndist->output->image, result->image,
+                      remapX_mat,
+                      remapY_mat,
+                      cv::InterpolationFlags::INTER_LINEAR);
+        }
+        else
+        {
+            photometricUndist->output->image.copyTo(result->image);
+        }
+
+        result->image.convertTo(result->image8u, CV_8U, 0.8);
     }
 
-    applyBlurNoise(reinterpret_cast<float*>(result->image.data));
+    photometricUndist->output->copyMetaTo(*result);
+
+    // Disabled benchmark_varBlurNoise and benchmark_varNoise
+
+    //if (!passthrough)
+    //{
+    //    float* out_data = reinterpret_cast<float*>(result->image.data);
+    //    float* in_data = reinterpret_cast<float*>(photometricUndist->output->image.data);
+
+    //    float* noiseMapX = 0;
+    //    float* noiseMapY = 0;
+
+    //    if(benchmark_varNoise > 0)
+    //    {
+    //        int numnoise = (benchmark_noiseGridsize + 8) * (benchmark_noiseGridsize + 8);
+    //        noiseMapX = new float[numnoise];
+    //        noiseMapY = new float[numnoise];
+    //        memset(noiseMapX, 0, sizeof(float)*numnoise);
+    //        memset(noiseMapY, 0, sizeof(float)*numnoise);
+
+    //        for(int i = 0; i < numnoise; i++)
+    //        {
+    //            noiseMapX[i] =  2 * benchmark_varNoise * (rand() / (float)RAND_MAX - 0.5f);
+    //            noiseMapY[i] =  2 * benchmark_varNoise * (rand() / (float)RAND_MAX - 0.5f);
+    //        }
+    //    }
+
+
+    //    for(int idx = w * h - 1; idx >= 0; idx--)
+    //    {
+    //        // get interp. values
+    //        float xx = remapX[idx];
+    //        float yy = remapY[idx];
+
+
+
+    //        if(benchmark_varNoise > 0)
+    //        {
+    //            float deltax = getInterpolatedElement11BiCub(noiseMapX,
+    //                                                         4 + (xx / (float)wOrg) * benchmark_noiseGridsize, 4 + (yy / (float)hOrg) * benchmark_noiseGridsize,
+    //                                                         benchmark_noiseGridsize + 8 );
+    //            float deltay = getInterpolatedElement11BiCub(noiseMapY,
+    //                                                         4 + (xx / (float)wOrg) * benchmark_noiseGridsize, 4 + (yy / (float)hOrg) * benchmark_noiseGridsize,
+    //                                                         benchmark_noiseGridsize + 8 );
+    //            float x = idx % w + deltax;
+    //            float y = idx / w + deltay;
+
+    //            if(x < 0.01)
+    //            {
+    //                x = 0.01;
+    //            }
+
+    //            if(y < 0.01)
+    //            {
+    //                y = 0.01;
+    //            }
+
+    //            if(x > w - 1.01)
+    //            {
+    //                x = w - 1.01;
+    //            }
+
+    //            if(y > h - 1.01)
+    //            {
+    //                y = h - 1.01;
+    //            }
+
+    //            xx = getInterpolatedElement(remapX, x, y, w);
+    //            yy = getInterpolatedElement(remapY, x, y, w);
+    //        }
+
+
+    //        if(xx < 0)
+    //        {
+    //            out_data[idx] = 0;
+    //        }
+    //        else
+    //        {
+    //            // get integer and rational parts
+    //            int xxi = xx;
+    //            int yyi = yy;
+    //            xx -= xxi;
+    //            yy -= yyi;
+    //            float xxyy = xx * yy;
+
+    //            // get array base pointer
+    //            const float* src = in_data + xxi + yyi * wOrg;
+
+    //            // interpolate (bilinear)
+    //            out_data[idx] =  xxyy * src[1 + wOrg]
+    //                             + (yy - xxyy) * src[wOrg]
+    //                             + (xx - xxyy) * src[1]
+    //                             + (1 - xx - yy + xxyy) * src[0];
+    //        }
+    //    }
+
+    //    if(benchmark_varNoise > 0)
+    //    {
+    //        delete[] noiseMapX;
+    //        delete[] noiseMapY;
+    //    }
+
+    //}
+    //else
+    //{
+    //    photometricUndist->output->image.copyTo(result->image);
+    //}
+
+    //applyBlurNoise(reinterpret_cast<float*>(result->image.data));
 
     return result;
 }
@@ -1220,6 +1341,16 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
         }
 
     valid = true;
+
+    // wrap remap data in a mat for remap processing
+    remapX_mat = cv::Mat(h, w, CV_32FC1, remapX, cv::Mat::AUTO_STEP);
+    remapY_mat = cv::Mat(h, w, CV_32FC1, remapY, cv::Mat::AUTO_STEP);
+
+    if (setting_UseOpenCL)
+    {
+        remapX_mat.copyTo(remapX_umat);
+        remapY_mat.copyTo(remapY_umat);
+    }
 
     LOG_INFO("Rectified Kamera Matrix:");
     LOG_INFO("%.1f %.1f %.1f", K(0, 0), K(0, 1), K(0, 2));

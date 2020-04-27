@@ -50,6 +50,10 @@ public:
     // raw irradiance = a*I + b.
     // output will be written in [output].
     void processFrame(const cv::Mat& image_in, float exposure_time, float factor = 1);
+
+    // GPU version of the processFrame function
+    void processFrame(const cv::UMat& image_in, float exposure_time, float factor = 1);
+
     void unMapFloatImage(float* image);
 
     ImageAndExposure* output;
@@ -70,7 +74,11 @@ private:
     int GDepth;
     cv::Mat vignetteMap;
     cv::Mat vignetteMapInv;
+
+    cv::UMat G_umat;
+    cv::UMat vignetteMapInv_umat;
     int w, h;
+    int wh;
     bool valid;
 };
 
@@ -131,6 +139,9 @@ protected:
 
     float* remapX;
     float* remapY;
+
+    cv::Mat remapX_mat, remapY_mat;
+    cv::UMat remapX_umat, remapY_umat;
 
     void applyBlurNoise(float* img) const;
 

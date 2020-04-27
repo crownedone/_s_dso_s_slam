@@ -279,6 +279,8 @@ struct FrameHessian
     };
 
 
+    void makeImages(cv::UMat color, CalibHessian* HCalib);
+
     void makeImages(cv::Mat color, CalibHessian* HCalib);
 
     inline Vec10 getPrior()

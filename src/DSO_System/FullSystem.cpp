@@ -1782,7 +1782,17 @@ void FullSystem::addActiveFrame(std::shared_ptr<ImageAndExposure> image, int id)
 
     // =========================== make Images / derivatives etc. =========================
     fh->ab_exposure = image->exposure_time;
-    fh->makeImages(image->image, &Hcalib);
+
+    if (setting_UseOpenCL)
+    {
+        assert(!image->image_gpu.empty());
+        fh->makeImages(image->image_gpu, &Hcalib);
+    }
+    else
+    {
+        assert(!image->image.empty());
+        fh->makeImages(image->image, &Hcalib);
+    }
 
     LOG_INFO("MakeImages: %f [ms]", sw.restart());
 

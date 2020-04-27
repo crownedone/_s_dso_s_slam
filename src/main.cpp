@@ -60,7 +60,7 @@ DEFINE_string(sequenceFolder, "", "path to your sequence Folder");
 DEFINE_string(orbVocab, "", "ORB-Vocabulary");
 DEFINE_string(orbSettings, "", "ORB-Settings yaml");
 DEFINE_bool(runQuiet, true, "Disable debug output");
-DEFINE_bool(dsoGPU, false, "USE GPU Calculation");
+DEFINE_bool(GPU, false, "USE GPU Calculation");
 
 DEFINE_int32(preset, 0,
              "0 - DEFAULT settings : \n"\
@@ -241,13 +241,14 @@ void initializeOpenCL()
     //Queue = cv::ocl::Queue::getDefault();
     //Context.setUseSVM(hasSVM); // Use SVM if avaialable
 };
+
 int main( int argc, char** argv )
 {
     // Init google logging
     // http://rpg.ifi.uzh.ch/docs/glog.html
     google::InitGoogleLogging(argv[0]);
 
-    // Intend to do parallelization
+    // Seems to have no impact on performance
     Eigen::initParallel();
 
     // log options (there are more options available)
@@ -264,10 +265,10 @@ int main( int argc, char** argv )
         exit(1);
     }
 
-    setting_UseOpenCL = FLAGS_dsoGPU;
+    setting_UseOpenCL = FLAGS_GPU;
     setting_debugout_runquiet = FLAGS_runQuiet;
 
-    if (FLAGS_dsoGPU)
+    if (FLAGS_GPU)
     {
         initializeOpenCL();
     }
@@ -333,6 +334,7 @@ int main( int argc, char** argv )
     }
 
     int id = 0;
+
     input.onFrame.connect([ =, &id, &fullSystem, &orbSystem](std::shared_ptr<const IO::FramePack> frame)
     {
         if (fullSystem->initFailed || setting_fullResetRequested)
@@ -386,16 +388,38 @@ int main( int argc, char** argv )
         }
         else
         {
+            cv::Mat input8U;
+
+            if (!img->image8u_umat.empty())
+            {
+                img->image8u_umat.copyTo(input8U);
+            }
+            else
+            {
+                input8U = img->image8u;
+            }
+
             if (img1)
             {
-                orbSystem->TrackStereo(frame->frame, frame->frame_slave1, img->timestamp);
+                cv::Mat input8U_2;
+
+                if (!img1->image8u_umat.empty())
+                {
+                    img1->image8u_umat.copyTo(input8U_2);
+                }
+                else
+                {
+                    input8U_2 = img1->image8u;
+                }
+
+                orbSystem->TrackStereo(input8U,
+                                       input8U_2,
+                                       img->timestamp);
                 fullSystem->addActiveFrame(img, img1, frame->id);
             }
             else
             {
-                cv::Mat orbImg;
-                img->image.convertTo(orbImg, CV_8UC1, 0.8f);
-                orbSystem->TrackMonocular(orbImg, frame->timestamp);
+                orbSystem->TrackMonocular(input8U, frame->timestamp);
                 fullSystem->addActiveFrame(img, frame->id);
             }
         }

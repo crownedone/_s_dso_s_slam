@@ -36,13 +36,17 @@ class ImageAndExposure
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    cv::Mat image8u;
+    cv::UMat image8u_umat;
     cv::Mat image;          // irradiance. between 0 and 256
+    cv::UMat image_gpu;     // image in gpu memory
+
     int w, h;               // width and height;
     double timestamp;
     float exposure_time;    // exposure time in ms.
+
     inline ImageAndExposure(int w_, int h_, double timestamp_ = 0) : w(w_), h(h_), timestamp(timestamp_)
     {
-        image = cv::Mat(h, w, CV_32FC1);
         exposure_time = 1;
     }
     inline ImageAndExposure(cv::Mat img, double timestamp_ = 0, float exposure = 1.f) : image(img),
