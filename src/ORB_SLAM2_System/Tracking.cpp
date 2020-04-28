@@ -183,6 +183,50 @@ void Tracking::SetLoopClosing(LoopClosing* pLoopClosing)
 {
     mpLoopClosing = pLoopClosing;
 }
+cv::Mat Tracking::GrabImageStereo(const cv::UMat& imRectLeft, const cv::UMat& imRectRight,
+                                  const double& timestamp)
+{
+    cv::UMat imGrayRight;
+
+    if (imRectLeft.channels() == 1)
+    {
+        mImGray_umat = imRectLeft;
+        imGrayRight = imRectRight;
+    }
+    else if (imRectLeft.channels() == 3)
+    {
+        if (mbRGB)
+        {
+            cvtColor(imRectLeft, mImGray_umat, cv::COLOR_RGB2GRAY);
+            cvtColor(imRectRight, imGrayRight, cv::COLOR_RGB2GRAY);
+        }
+        else
+        {
+            cvtColor(imRectLeft, mImGray_umat, cv::COLOR_BGR2GRAY);
+            cvtColor(imRectRight, imGrayRight, cv::COLOR_BGR2GRAY);
+        }
+    }
+    else if (imRectLeft.channels() == 4)
+    {
+        if (mbRGB)
+        {
+            cvtColor(imRectLeft, mImGray_umat, cv::COLOR_RGBA2GRAY);
+            cvtColor(imRectRight, imGrayRight, cv::COLOR_RGBA2GRAY);
+        }
+        else
+        {
+            cvtColor(imRectLeft, mImGray_umat, cv::COLOR_BGRA2GRAY);
+            cvtColor(imRectRight, imGrayRight, cv::COLOR_BGRA2GRAY);
+        }
+    }
+
+    mCurrentFrame = Frame(mImGray_umat, imGrayRight, timestamp, mpORBextractorLeft, mpORBextractorRight,
+                          mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+
+    Track();
+
+    return mCurrentFrame.mTcw.clone();
+}
 
 cv::Mat Tracking::GrabImageStereo(const cv::Mat& imRectLeft, const cv::Mat& imRectRight,
                                   const double& timestamp)
@@ -305,6 +349,51 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat& im, const double& timestamp)
     else
     {
         mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf,
+                              mThDepth);
+    }
+
+    Track();
+
+    return mCurrentFrame.mTcw.clone();
+}
+
+cv::Mat Tracking::GrabImageMonocular(const cv::UMat& im, const double& timestamp)
+{
+    if (im.channels() == 1)
+    {
+        mImGray_umat = im;
+    }
+    else if (im.channels() == 3)
+    {
+        if (mbRGB)
+        {
+            cvtColor(im, mImGray_umat, cv::COLOR_RGB2GRAY);
+        }
+        else
+        {
+            cvtColor(im, mImGray_umat, cv::COLOR_BGR2GRAY);
+        }
+    }
+    else if (im.channels() == 4)
+    {
+        if (mbRGB)
+        {
+            cvtColor(im, mImGray_umat, cv::COLOR_RGBA2GRAY);
+        }
+        else
+        {
+            cvtColor(im, mImGray_umat, cv::COLOR_BGRA2GRAY);
+        }
+    }
+
+    if (mState == NOT_INITIALIZED || mState == NO_IMAGES_YET)
+    {
+        mCurrentFrame = Frame(mImGray_umat, timestamp, mpIniORBextractor, mpORBVocabulary, mK, mDistCoef, mbf,
+                              mThDepth);
+    }
+    else
+    {
+        mCurrentFrame = Frame(mImGray_umat, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf,
                               mThDepth);
     }
 

@@ -52,6 +52,9 @@ public:
     Frame(const cv::Mat& imLeft, const cv::Mat& imRight, const double& timeStamp,
           ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat& K,
           cv::Mat& distCoef, const float& bf, const float& thDepth);
+    Frame(const cv::UMat& imLeft, const cv::UMat& imRight, const double& timeStamp,
+          ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat& K,
+          cv::Mat& distCoef, const float& bf, const float& thDepth);
 
     // Constructor for RGB-D cameras.
     Frame(const cv::Mat& imGray, const cv::Mat& imDepth, const double& timeStamp,
@@ -61,9 +64,13 @@ public:
     // Constructor for Monocular cameras.
     Frame(const cv::Mat& imGray, const double& timeStamp, ORBextractor* extractor, ORBVocabulary* voc,
           cv::Mat& K, cv::Mat& distCoef, const float& bf, const float& thDepth);
+    Frame(const cv::UMat& imGray, const double& timeStamp, ORBextractor* extractor, ORBVocabulary* voc,
+          cv::Mat& K, cv::Mat& distCoef, const float& bf, const float& thDepth);
 
     // Extract ORB on the image. 0 for left image and 1 for right image.
     void ExtractORB(int flag, const cv::Mat& im);
+
+    void ExtractORB_u(int flag, const cv::UMat& im);
 
     // Compute Bag of Words representation.
     void ComputeBoW();
@@ -204,6 +211,7 @@ private:
     void UndistortKeyPoints();
 
     // Computes image bounds for the undistorted image (called in the constructor).
+    void ComputeImageBounds(const cv::UMat& imLeft);
     void ComputeImageBounds(const cv::Mat& imLeft);
 
     // Assign keypoints to the grid for speed up feature matching (called in the constructor).

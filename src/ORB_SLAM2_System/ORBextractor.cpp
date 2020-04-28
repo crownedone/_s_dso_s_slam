@@ -59,7 +59,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
-
+#include <Logging.hpp>
 #include "ORBextractor.hpp"
 
 
@@ -446,6 +446,7 @@ ORBextractor::ORBextractor(int _nfeatures, float _scaleFactor, int _nlevels,
     }
 
     mvImagePyramid.resize(nlevels);
+    mvImagePyramid_umat.resize(nlevels);
 
     mnFeaturesPerLevel.resize(nlevels);
     float factor = 1.0f / scaleFactor;
@@ -837,14 +838,27 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
 {
     allKeypoints.resize(nlevels);
 
+    bool gpu = false;
+
+    // Use GPU
+    if (mvImagePyramid[0].empty())
+    {
+        LOG_WARNING("opencv FAST does not provide sufficient results on GPU...");
+        gpu = true;
+    }
+
     const float W = 30;
 
     for (int level = 0; level < nlevels; ++level)
     {
         const int minBorderX = EDGE_THRESHOLD - 3;
         const int minBorderY = minBorderX;
-        const int maxBorderX = mvImagePyramid[level].cols - EDGE_THRESHOLD + 3;
-        const int maxBorderY = mvImagePyramid[level].rows - EDGE_THRESHOLD + 3;
+        const int maxBorderX = gpu ?
+                               mvImagePyramid_umat[level].cols - EDGE_THRESHOLD + 3 :
+                               mvImagePyramid[level].cols - EDGE_THRESHOLD + 3;
+        const int maxBorderY = gpu ?
+                               mvImagePyramid_umat[level].rows - EDGE_THRESHOLD + 3 :
+                               mvImagePyramid[level].rows - EDGE_THRESHOLD + 3;
 
         vector<cv::KeyPoint> vToDistributeKeys;
         vToDistributeKeys.reserve(nfeatures * 10);
@@ -888,13 +902,28 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
                 }
 
                 vector<cv::KeyPoint> vKeysCell;
-                FAST(mvImagePyramid[level].rowRange(iniY, maxY).colRange(iniX, maxX),
-                     vKeysCell, iniThFAST, true);
 
-                if(vKeysCell.empty())
+                if (gpu)
+                {
+                    FAST(mvImagePyramid_umat[level].rowRange(iniY, maxY).colRange(iniX, maxX),
+                         vKeysCell, iniThFAST, true);
+
+                    if (vKeysCell.empty())
+                    {
+                        FAST(mvImagePyramid_umat[level].rowRange(iniY, maxY).colRange(iniX, maxX),
+                             vKeysCell, minThFAST, true);
+                    }
+                }
+                else
                 {
                     FAST(mvImagePyramid[level].rowRange(iniY, maxY).colRange(iniX, maxX),
-                         vKeysCell, minThFAST, true);
+                         vKeysCell, iniThFAST, true);
+
+                    if(vKeysCell.empty())
+                    {
+                        FAST(mvImagePyramid[level].rowRange(iniY, maxY).colRange(iniX, maxX),
+                             vKeysCell, minThFAST, true);
+                    }
                 }
 
                 if(!vKeysCell.empty())
@@ -906,7 +935,6 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
                         vToDistributeKeys.push_back(*vit);
                     }
                 }
-
             }
         }
 
@@ -933,6 +961,12 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
     // compute orientations
     for (int level = 0; level < nlevels; ++level)
     {
+        // orientation is only CPU
+        if (gpu) // / download as needed
+        {
+            mvImagePyramid_umat[level].copyTo(mvImagePyramid[level]);
+        }
+
         computeOrientation(mvImagePyramid[level], allKeypoints[level], umax);
     }
 }
@@ -1146,11 +1180,22 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
         return;
     }
 
-    Mat image = _image.getMat();
-    assert(image.type() == CV_8UC1 );
+    if (_image.isUMat())
+    {
+        UMat image = _image.getUMat();
+        assert(image.type() == CV_8UC1);
 
-    // Pre-compute the scale pyramid
-    ComputePyramid(image);
+        // Pre-compute the scale pyramid
+        ComputePyramid(image);
+    }
+    else if (_image.isMat())
+    {
+        Mat image = _image.getMat();
+        assert(image.type() == CV_8UC1 );
+
+        // Pre-compute the scale pyramid
+        ComputePyramid(image);
+    }
 
     vector < vector<KeyPoint>> allKeypoints;
     ComputeKeyPointsOctTree(allKeypoints);
@@ -1216,6 +1261,38 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
         _keypoints.insert(_keypoints.end(), keypoints.begin(), keypoints.end());
     }
 }
+
+void ORBextractor::ComputePyramid(cv::UMat image)
+{
+    for (int level = 0; level < nlevels; ++level)
+    {
+        float scale = mvInvScaleFactor[level];
+        Size sz(cvRound((float)image.cols * scale), cvRound((float)image.rows * scale));
+        Size wholeSize(sz.width + EDGE_THRESHOLD * 2, sz.height + EDGE_THRESHOLD * 2);
+        UMat temp(wholeSize, image.type()), masktemp;
+        mvImagePyramid_umat[level] = temp(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height));
+
+        // Compute the resized image
+        if (level != 0)
+        {
+            // OpenCV functions naturally support opencl (most of them) if their input is UMat instead of Mat. These here do.
+            resize(mvImagePyramid_umat[level - 1], mvImagePyramid_umat[level], sz, 0, 0, INTER_LINEAR);
+
+            copyMakeBorder(mvImagePyramid_umat[level], temp, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+                           EDGE_THRESHOLD,
+                           BORDER_REFLECT_101 + BORDER_ISOLATED);
+        }
+        else
+        {
+            copyMakeBorder(image, temp, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+                           BORDER_REFLECT_101);
+        }
+
+        mvImagePyramid_umat[level].copyTo(mvImagePyramid[level]);
+    }
+
+}
+
 
 void ORBextractor::ComputePyramid(cv::Mat image)
 {

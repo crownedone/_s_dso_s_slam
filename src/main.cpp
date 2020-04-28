@@ -388,38 +388,31 @@ int main( int argc, char** argv )
         }
         else
         {
-            cv::Mat input8U;
-
-            if (!img->image8u_umat.empty())
-            {
-                img->image8u_umat.copyTo(input8U);
-            }
-            else
-            {
-                input8U = img->image8u;
-            }
-
             if (img1)
             {
-                cv::Mat input8U_2;
-
-                if (!img1->image8u_umat.empty())
+                if (img->image8u_umat.empty())
                 {
-                    img1->image8u_umat.copyTo(input8U_2);
+                    orbSystem->TrackStereo(img->image8u, img1->image8u, frame->timestamp);
                 }
                 else
                 {
-                    input8U_2 = img1->image8u;
+                    orbSystem->TrackStereo(img1->image8u_umat, img1->image8u_umat, frame->timestamp);
                 }
 
-                orbSystem->TrackStereo(input8U,
-                                       input8U_2,
-                                       img->timestamp);
                 fullSystem->addActiveFrame(img, img1, frame->id);
             }
             else
             {
-                orbSystem->TrackMonocular(input8U, frame->timestamp);
+                if (img->image8u_umat.empty())
+                {
+                    orbSystem->TrackMonocular(img->image8u, frame->timestamp);
+                }
+                else
+                {
+                    orbSystem->TrackMonocular(img->image8u_umat, frame->timestamp);
+                }
+
+
                 fullSystem->addActiveFrame(img, frame->id);
             }
         }

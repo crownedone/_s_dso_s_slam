@@ -59,8 +59,12 @@ public:
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat& imRectLeft, const cv::Mat& imRectRight,
                             const double& timestamp);
+    cv::Mat GrabImageStereo(const cv::UMat& imRectLeft, const cv::UMat& imRectRight,
+                            const double& timestamp);
+
     cv::Mat GrabImageRGBD(const cv::Mat& imRGB, const cv::Mat& imD, const double& timestamp);
     cv::Mat GrabImageMonocular(const cv::Mat& im, const double& timestamp);
+    cv::Mat GrabImageMonocular(const cv::UMat& im, const double& timestamp);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
     void SetLoopClosing(LoopClosing* pLoopClosing);
@@ -95,6 +99,7 @@ public:
     // Current Frame
     Frame mCurrentFrame;
     cv::Mat mImGray;
+    cv::UMat mImGray_umat;
 
     // Initialization Variables (Monocular)
     std::vector<int> mvIniLastMatches;

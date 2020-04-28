@@ -189,7 +189,16 @@ void FrameDrawer::Update(Tracking* pTracker)
 {
     {
         unique_lock<mutex> lock(mMutex);
-        pTracker->mImGray.copyTo(mIm);
+
+        if (pTracker->mImGray.empty())
+        {
+            pTracker->mImGray_umat.copyTo(mIm);
+        }
+        else
+        {
+            pTracker->mImGray.copyTo(mIm);
+        }
+
         mvCurrentKeys = pTracker->mCurrentFrame.mvKeys;
         N = mvCurrentKeys.size();
         mvbVO = vector<bool>(N, false);
