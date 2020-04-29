@@ -1,36 +1,30 @@
 # Introduction
+A merge of two different approaches to SLAM: [Direct Sparse Odometry](http://vision.in.tum.de/dso) and [ORB-SLAM2](https://github.com/raulmur/ORB_SLAM2).
+Additionally merged [Stereo-DSO](https://github.com/RonaldSun/VI-Stereo-DSO) to provide capabilities of both Mono and Stereo SLAM.
 
-This project represents the merger of two different approaches related to the processing of depth and mapping of nearby environments, namely, DSO and ORB-SLAM.
+# Build instructions
 
-ORB-SLAM2 is a real-time SLAM library for Monocular, Stereo and RGB-D cameras that computes the camera trajectory and a sparse 3D reconstruction (in the stereo and RGB-D case with true scale). 
+Under Windows using vcpkg. The script 'installDependencies.bat' installs all the necessary dependecies.
 
-# How to Build Under Windows
+Additionally Pangolin must be build within the thridparty Folder as well as g2o.
 
-To build under windows you need vcpkg and cmake installed in C:/.
+It might be necessary to copy .dll files by hand under windows.
 
-We have make.bat which is a script file that we are required to run run that will install most of the dependencies.
+# Open-CL
 
-## g2o
-After the dependencies have been installed by running the bash script file, we must then build the g2o package. We then need to copy the dll that is generated in the g2o folder to the 'bin' folder.
+Optimization within this project utilizes the GPU using OpenCL through openCV's interface. Make sure OpenCV is compiled with the OpenCL option and you have appropriate drivers installed.
+Intel should support OpenCL by default, AMD and NVidia might need additional driver setup.
 
-## Sequence Folder
+# DBoW
 
-Within the properties of the DSO project, we are required to set the file path to our particular video sequence. the following picture can be used as an example:
+ORB-SLAM2's DBoW is slightly modified and hard-added in this repository.
+See [https://github.com/dorian3d/DBow](https://github.com/dorian3d/DBow).
 
-"sequenceFolder=C:\Users\user_name\Dcouments\dso_seq1" without the quotation marks.
+# Run
+
+The project uses gflags for easier flag handling. Use '--help' to see available options.
 
 
-# Build & run
-
-All that is then left is to build the project.
-
-We can then run our project in Debug mode first to check whether or not there are any errors present.
-
-Assuming that we don not encounter any errors, we can then run the project in Release mode. 
-
-# Open-CL tests
-
-The functions that we are optimizing and running on the iGPU using the OpenCL library are in the file: 'InputTests.cpp'
 
 ### 5 License
 DSO was developed at the Technical University of Munich and Intel.
@@ -40,4 +34,5 @@ For commercial purposes, we also offer a professional version, see
 [http://vision.in.tum.de/dso](http://vision.in.tum.de/dso) for
 details.
 
+Licenses for ORB-SLAM2, DboW are copied within this repository.
 
