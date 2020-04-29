@@ -5,6 +5,7 @@ Additionally merged [Stereo-DSO](https://github.com/RonaldSun/VI-Stereo-DSO) to 
 # Build instructions
 
 Under Windows using vcpkg. The script 'installDependencies.bat' installs all the necessary dependecies.
+(You need vcpkg and cmake installed under C:/)
 
 Additionally Pangolin must be build within the thridparty Folder as well as g2o.
 
@@ -17,8 +18,8 @@ Intel should support OpenCL by default, AMD and NVidia might need additional dri
 
 # DBoW
 
-ORB-SLAM2's DBoW is slightly modified and hard-added in this repository.
-See [https://github.com/dorian3d/DBow](https://github.com/dorian3d/DBow).
+ORB-SLAM2's DBoW2 is slightly modified and hard-added in this repository.
+See [https://github.com/dorian3d/DBoW2](https://github.com/dorian3d/DBoW2).
 
 # Run
 
