@@ -368,53 +368,40 @@ int main( int argc, char** argv )
             return;
         }
 
+        StopWatch sw;
         auto img = undistort->undistort(
                        frame->frame, frame->exposure, frame->timestamp);
 
         auto img1 = (!frame->frame_slave1.empty()) ?  undistort->undistort(
                         frame->frame_slave1, frame->exposure_slave1, frame->timestamp_slave1) : nullptr;
+        LOG_INFO("Preprocessing time %f ms", sw.restart());
 
-        if (false)// FLAGS_stereomatch)
+        if (img1)
         {
-            std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-
-            //cv::Mat idepthMap(img->h, img_right->w, CV_32FC3, cv::Scalar(0, 0, 0));
-            //cv::Mat& idepth_temp = idepthMap;
-            //fullSystem->stereoMatch(img_left, img_right, i, idepth_temp);
-
-            std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-            double ttStereoMatch = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0).count();
-            LOG_INFO(" casting time %f s", ttStereoMatch);
-        }
-        else
-        {
-            if (img1)
+            if (img->image8u_umat.empty())
             {
-                if (img->image8u_umat.empty())
-                {
-                    orbSystem->TrackStereo(img->image8u, img1->image8u, frame->timestamp);
-                }
-                else
-                {
-                    orbSystem->TrackStereo(img1->image8u_umat, img1->image8u_umat, frame->timestamp);
-                }
-
-                fullSystem->addActiveFrame(img, img1, frame->id);
+                orbSystem->TrackStereo(img->image8u, img1->image8u, frame->timestamp);
             }
             else
             {
-                if (img->image8u_umat.empty())
-                {
-                    orbSystem->TrackMonocular(img->image8u, frame->timestamp);
-                }
-                else
-                {
-                    orbSystem->TrackMonocular(img->image8u_umat, frame->timestamp);
-                }
-
-
-                fullSystem->addActiveFrame(img, frame->id);
+                orbSystem->TrackStereo(img1->image8u_umat, img1->image8u_umat, frame->timestamp);
             }
+
+            fullSystem->addActiveFrame(img, img1, frame->id);
+        }
+        else
+        {
+            if (img->image8u_umat.empty())
+            {
+                orbSystem->TrackMonocular(img->image8u, frame->timestamp);
+            }
+            else
+            {
+                orbSystem->TrackMonocular(img->image8u_umat, frame->timestamp);
+            }
+
+
+            fullSystem->addActiveFrame(img, frame->id);
         }
     });
 

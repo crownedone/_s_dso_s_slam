@@ -316,6 +316,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat& imRGB, const cv::Mat& imD, const 
 
 cv::Mat Tracking::GrabImageMonocular(const cv::Mat& im, const double& timestamp)
 {
+    StopWatch sw;
     mImGray = im;
 
     if(mImGray.channels() == 3)
@@ -352,13 +353,18 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat& im, const double& timestamp)
                               mThDepth);
     }
 
+    LOG_INFO("ORB extraction time %f ms", sw.restart());
+
     Track();
 
+    LOG_INFO("ORB tracking time %f ms", sw.restart());
     return mCurrentFrame.mTcw.clone();
 }
 
 cv::Mat Tracking::GrabImageMonocular(const cv::UMat& im, const double& timestamp)
 {
+    StopWatch sw;
+
     if (im.channels() == 1)
     {
         mImGray_umat = im;
@@ -397,7 +403,11 @@ cv::Mat Tracking::GrabImageMonocular(const cv::UMat& im, const double& timestamp
                               mThDepth);
     }
 
+    LOG_INFO("ORB extraction time %f ms", sw.restart());
+
     Track();
+
+    LOG_INFO("ORB tracking time %f ms", sw.restart());
 
     return mCurrentFrame.mTcw.clone();
 }
